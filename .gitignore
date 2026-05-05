@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment secrets — NEVER commit
+.env
+*.env.local
+
+# Delta Lake / data (large binary files)
+data/
+mlruns/
+mlflow.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# pytest
+.pytest_cache/
+
+# Docker
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Ruff / Black cache
+.ruff_cache/
