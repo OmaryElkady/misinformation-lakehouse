@@ -1,0 +1,103 @@
+version: "3.9"
+
+# ─── Shared network ───────────────────────────────────────────────────────────
+networks:
+  lakehouse-net:
+    driver: bridge
+
+# ─── Named volumes ────────────────────────────────────────────────────────────
+volumes:
+  mlflow-data:
+  delta-data:
+  prefect-data:
+
+services:
+
+  # ── MLflow Tracking Server ──────────────────────────────────────────────────
+  mlflow:
+    image: python:3.11-slim
+    container_name: mlflow-server
+    working_dir: /mlflow
+    volumes:
+      - mlflow-data:/mlflow/mlruns
+    ports:
+      - "5000:5000"
+    networks:
+      - lakehouse-net
+    command: >
+      bash -c "pip install mlflow==2.13.0 --quiet &&
+               mlflow server
+               --host 0.0.0.0
+               --port 5000
+               --backend-store-uri sqlite:///mlflow/mlflow.db
+               --default-artifact-root /mlflow/mlruns"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── Prefect Server ─────────────────────────────────────────────────────────
+  prefect:
+    image: prefecthq/prefect:2.19.5-python3.11
+    container_name: prefect-server
+    volumes:
+      - prefect-data:/root/.prefect
+    ports:
+      - "4200:4200"
+    networks:
+      - lakehouse-net
+    command: prefect server start --host 0.0.0.0
+    environment:
+      PREFECT_API_DATABASE_CONNECTION_URL: "sqlite+aiosqlite:////root/.prefect/prefect.db"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4200/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Serving ────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: src/serving/Dockerfile
+    container_name: misinfo-api
+    ports:
+      - "8000:8000"
+    networks:
+      - lakehouse-net
+    volumes:
+      - mlflow-data:/mlflow/mlruns        # access model artifacts
+      - delta-data:/data/delta            # access Gold table for feature lookup
+    env_file:
+      - .env
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── Prefect Worker (runs flows) ────────────────────────────────────────────
+  prefect-worker:
+    image: prefecthq/prefect:2.19.5-python3.11
+    container_name: prefect-worker
+    working_dir: /app
+    volumes:
+      - .:/app
+      - delta-data:/data/delta
+    networks:
+      - lakehouse-net
+    env_file:
+      - .env
+    environment:
+      PREFECT_API_URL: http://prefect:4200/api
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    command: prefect worker start --pool default-agent-pool
+    depends_on:
+      prefect:
+        condition: service_healthy
