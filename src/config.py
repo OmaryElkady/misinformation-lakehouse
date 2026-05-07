@@ -15,6 +15,10 @@ load_dotenv()
 
 
 class Settings(BaseSettings):
+    # ── Bluesky ───────────────────────────────────────────────────────────────
+    bluesky_handle: str = ""
+    bluesky_app_password: str = ""
+
     # ── Reddit ────────────────────────────────────────────────────────────────
     reddit_client_id: str = ""
     reddit_client_secret: str = ""
