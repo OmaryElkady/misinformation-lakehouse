@@ -8,8 +8,8 @@ across ingestion, processing, and training jobs.
 
 from __future__ import annotations
 
-from pyspark.sql import SparkSession
 from loguru import logger
+from pyspark.sql import SparkSession
 
 from src.config import settings
 

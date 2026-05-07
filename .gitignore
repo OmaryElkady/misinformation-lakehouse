@@ -47,3 +47,6 @@ Thumbs.db
 
 # Ruff / Black cache
 .ruff_cache/
+
+# Claude Code — local tooling, not project source
+.claude/

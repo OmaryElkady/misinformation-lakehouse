@@ -6,8 +6,9 @@ These tests run with zero external dependencies (no Spark, no network).
 """
 
 import os
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 
 @pytest.mark.unit

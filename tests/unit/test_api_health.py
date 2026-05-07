@@ -7,7 +7,9 @@ Kubernetes / Docker healthchecks rely on.
 """
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+
+from httpx import ASGITransport, AsyncClient
+
 from src.serving.app import app
 
 
