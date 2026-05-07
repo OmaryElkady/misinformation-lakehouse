@@ -37,23 +37,22 @@ def get_spark(app_name: str = "MisinformationLakehouse") -> SparkSession:
     if settings.storage_mode == "s3":
         logger.info("Configuring Spark for S3 storage")
         builder = (
-            builder
-            .config("spark.hadoop.fs.s3a.access.key", settings.aws_access_key_id)
+            builder.config("spark.hadoop.fs.s3a.access.key", settings.aws_access_key_id)
             .config("spark.hadoop.fs.s3a.secret.key", settings.aws_secret_access_key)
             .config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com")
             .config(
                 "spark.hadoop.fs.s3a.impl",
                 "org.apache.hadoop.fs.s3a.S3AFileSystem",
             )
-            .config("spark.hadoop.fs.s3a.aws.credentials.provider",
-                    "com.amazonaws.auth.DefaultAWSCredentialsProviderChain")
+            .config(
+                "spark.hadoop.fs.s3a.aws.credentials.provider",
+                "com.amazonaws.auth.DefaultAWSCredentialsProviderChain",
+            )
         )
     else:
         logger.info("Configuring Spark for local storage")
 
-    spark = (
-        builder.getOrCreate()
-    )
+    spark = builder.getOrCreate()
 
     spark.sparkContext.setLogLevel("WARN")
     logger.info(f"SparkSession initialized | app={app_name} | mode={settings.storage_mode}")

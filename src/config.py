@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     s3_bucket_name: str = "misinformation-lakehouse-dev"
 
     # ── Storage ───────────────────────────────────────────────────────────────
-    storage_mode: str = "local"           # "local" | "s3"
+    storage_mode: str = "local"  # "local" | "s3"
     local_delta_path: str = "./data/delta"
 
     # ── MLflow ────────────────────────────────────────────────────────────────
@@ -73,8 +73,16 @@ class Settings(BaseSettings):
     def delta_path(self, layer: str) -> str:
         """Return the right path for a layer based on STORAGE_MODE."""
         paths = {
-            "local": {"bronze": self.bronze_path, "silver": self.silver_path, "gold": self.gold_path},
-            "s3": {"bronze": self.s3_bronze_path, "silver": self.s3_silver_path, "gold": self.s3_gold_path},
+            "local": {
+                "bronze": self.bronze_path,
+                "silver": self.silver_path,
+                "gold": self.gold_path,
+            },
+            "s3": {
+                "bronze": self.s3_bronze_path,
+                "silver": self.s3_silver_path,
+                "gold": self.s3_gold_path,
+            },
         }
         return paths[self.storage_mode][layer]
 

@@ -37,8 +37,13 @@ def test_gold_table_has_required_columns():
     from src.spark_session import get_spark
 
     required_columns = [
-        "id", "text", "label", "word_count", "char_count",
-        "sentiment_score", "source",
+        "id",
+        "text",
+        "label",
+        "word_count",
+        "char_count",
+        "sentiment_score",
+        "source",
     ]
     spark = get_spark("SmokeTest")
     df = spark.read.format("delta").load(settings.gold_path)
