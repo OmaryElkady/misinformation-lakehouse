@@ -49,6 +49,13 @@ tests/
 
 ---
 
+## Data Sources
+
+- **LIAR dataset** and **FakeNewsNet** loaded via HuggingFace Datasets library — no API key needed
+- Reddit ingestion was descoped — HuggingFace streaming is used for live ingestion instead
+
+---
+
 ## Non-Obvious Things
 
 - `STORAGE_MODE=local` for dev/CI, `STORAGE_MODE=s3` for production branch
@@ -65,3 +72,5 @@ tests/
 - `gotchas.md` — mistakes to avoid in this codebase
 - `architecture.md` — data flow and module responsibilities
 - `tech-stack.md` — pinned versions and approved libraries
+
+
