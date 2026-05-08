@@ -7,7 +7,7 @@
 ## System Overview
 
 End-to-end misinformation detection platform built on a lakehouse architecture.
-Data flows from public datasets (LIAR, FakeNewsNet) and live Reddit ingestion into
+Data flows from public datasets (LIAR, FakeNewsNet) via HuggingFace Datasets into
 Bronze Delta tables, gets cleaned and feature-engineered through Silver and Gold layers
 via PySpark, and feeds a fine-tuned RoBERTa classifier tracked in MLflow.
 Predictions are served in real-time via a Dockerized FastAPI endpoint that also
@@ -18,10 +18,10 @@ calls Groq's Llama 3 API for human-readable explanations.
 ## Data Flow
 
 ```
-Reddit API ──────┐
+LIAR Dataset ────┐
                  ├──► Bronze (raw)
-LIAR Dataset ────┘    Delta Table
-FakeNewsNet ─────┘         │
+FakeNewsNet ─────┘    Delta Table
+(via HuggingFace)          │
                            ▼
                     Silver (clean)
                     Delta Table
@@ -55,8 +55,7 @@ FakeNewsNet ─────┘         │
 |--------|----------|----------------|
 | Config | `src/config.py` | Single source of truth for all env vars |
 | Spark factory | `src/spark_session.py` | Consistent SparkSession with Delta + S3 config |
-| Static ingestion | `src/ingestion/ingest_static.py` | Load LIAR/FakeNewsNet → Bronze Delta |
-| Reddit ingestion | `src/ingestion/ingest_reddit.py` | Stream Reddit posts → Bronze Delta |
+| Static ingestion | `src/ingestion/ingest_static.py` | Load LIAR/FakeNewsNet via HuggingFace → Bronze Delta |
 | Bronze→Silver | `src/processing/bronze_to_silver.py` | Clean, deduplicate, normalize labels |
 | Silver→Gold | `src/processing/silver_to_gold.py` | Feature engineering, sentiment, TF-IDF |
 | Training | `src/training/train.py` | Fine-tune RoBERTa, log to MLflow |
