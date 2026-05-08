@@ -12,7 +12,7 @@ TODO: Implement in Step 5 (Serving Layer)
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI(
     title="Misinformation Detection API",
@@ -28,4 +28,4 @@ async def health() -> dict:
 
 @app.post("/predict")
 async def predict(payload: dict) -> dict:
-    raise NotImplementedError("Implement in Step 5")
+    raise HTTPException(status_code=500, detail="Not yet implemented")
