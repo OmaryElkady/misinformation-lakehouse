@@ -8,7 +8,7 @@ instead of calling os.getenv() scattered across the codebase.
 from __future__ import annotations
 
 from dotenv import load_dotenv
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Load .env if present (no-op in Docker / CI where vars are injected)
 load_dotenv()
@@ -90,10 +90,12 @@ class Settings(BaseSettings):
         }
         return paths[self.storage_mode][layer]
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        protected_namespaces=(),
+    )
 
 
 # ─── Singleton — import this everywhere ───────────────────────────────────────

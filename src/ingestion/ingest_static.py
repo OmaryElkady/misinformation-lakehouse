@@ -107,7 +107,7 @@ def _load_fakenewsnet() -> list[dict[str, Any]]:
 def _merge_to_bronze(records: list[dict[str, Any]], path: str) -> None:
     """Write records to Bronze Delta table using merge to avoid duplicates on re-run."""
     # Lazy imports keep unit tests free of PySpark
-    import pyspark.sql.functions as F
+    import pyspark.sql.functions as F  # noqa: N812
     from delta.tables import DeltaTable
     from pyspark.sql.types import StringType, StructField, StructType
 

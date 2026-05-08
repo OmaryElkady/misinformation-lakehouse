@@ -101,10 +101,11 @@ class TestRunRaisesOnHFFailure:
         mock_load.assert_called_once_with("liar")
 
     def test_run_raises_when_fakenewsnet_dataset_fails_to_load(self):
+        import unittest.mock as mock
+
         from src.ingestion.ingest_static import run
 
         # Minimal mock of the LIAR dataset structure
-        import unittest.mock as mock
 
         liar_label_feature = mock.MagicMock()
         liar_label_feature.names = ["false", "half-true", "mostly-true", "true", "barely-true", "pants-fire"]
