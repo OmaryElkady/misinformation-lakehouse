@@ -108,7 +108,14 @@ class TestRunRaisesOnHFFailure:
         # Minimal mock of the LIAR dataset structure
 
         liar_label_feature = mock.MagicMock()
-        liar_label_feature.names = ["false", "half-true", "mostly-true", "true", "barely-true", "pants-fire"]
+        liar_label_feature.names = [
+            "false",
+            "half-true",
+            "mostly-true",
+            "true",
+            "barely-true",
+            "pants-fire",
+        ]
 
         liar_split = mock.MagicMock()
         liar_split.features = {"label": liar_label_feature}
