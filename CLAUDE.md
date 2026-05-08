@@ -9,7 +9,7 @@
 ## Quick Start
 
 ```bash
-# Install (in WSL2, Python 3.11)
+# Install (in WSL2, Python 3.12)
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
@@ -42,7 +42,7 @@ tests/
 
 ## Key Conventions
 
-- **Language:** Python 3.11
+- **Language:** Python 3.12
 - **Test framework:** pytest — unit tests in `tests/unit/`, integration in `tests/integration/`
 - **Formatter:** ruff + black — auto-runs via `.claude/hooks/auto-format.sh`
 - **Config:** pydantic-settings via `src/config.py` — always import `settings` from there

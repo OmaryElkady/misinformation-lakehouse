@@ -9,9 +9,9 @@
 
 | Thing | Version |
 |-------|---------|
-| Python | 3.11 |
+| Python | 3.12 |
 | WSL2 | Ubuntu 22.04 |
-| Java (for Spark) | 11 (OpenJDK) |
+| Java (for Spark) | 17 (OpenJDK) |
 
 ---
 
@@ -19,8 +19,8 @@
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| pyspark | 3.5.1 | Distributed data processing |
-| delta-spark | 3.1.0 | Delta Lake on local/S3 |
+| pyspark | 4.1.1 | Distributed data processing |
+| delta-spark | 3.3.0 | Delta Lake on local/S3 |
 | pandas | 2.2.2 | Small data, ingestion helpers |
 | pyarrow | 16.0.0 | Parquet / Delta serialization |
 | transformers | 4.41.2 | RoBERTa fine-tuning + tokenizer |
