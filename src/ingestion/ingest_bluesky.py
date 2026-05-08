@@ -19,9 +19,7 @@ _SEARCH_QUERIES = ["news", "politics", "misinformation", "fact check"]
 
 
 def _fetch_posts(client: Any, query: str, limit: int) -> list[dict[str, Any]]:
-    response = client.app.bsky.feed.search_posts(
-        params={"q": query, "limit": min(limit, 100)}
-    )
+    response = client.app.bsky.feed.search_posts(params={"q": query, "limit": min(limit, 100)})
     posts = response.posts or []
     records = []
     for post in posts:
