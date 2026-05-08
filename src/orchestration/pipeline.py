@@ -2,7 +2,7 @@
 pipeline.py — Prefect flow wiring the full lakehouse pipeline.
 
 Flow DAG:
-  ingest_static → ingest_reddit
+  ingest_static → ingest_bluesky
         ↓
   bronze_to_silver
         ↓
