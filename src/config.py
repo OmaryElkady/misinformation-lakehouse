@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     # ── Prefect ───────────────────────────────────────────────────────────────
     prefect_api_url: str = "http://localhost:4200/api"
 
+    # ── ngrok (expose local MLflow to Google Colab) ───────────────────────────
+    ngrok_authtoken: str = ""
+
+    # ── Training exports ──────────────────────────────────────────────────────
+    gold_export_path: str = "./data/exports"
+
     # ── Derived paths (not from env) ──────────────────────────────────────────
     @property
     def bronze_path(self) -> str:
