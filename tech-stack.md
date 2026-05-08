@@ -22,7 +22,7 @@
 | pyspark | 4.1.1 | Distributed data processing |
 | delta-spark | 4.1.0 | Delta Lake on local/S3 |
 | pandas | 2.2.2 | Small data, ingestion helpers |
-| pyarrow | 16.0.0 | Parquet / Delta serialization |
+| pyarrow | 15.0.2 | Parquet / Delta serialization |
 | transformers | 4.41.2 | RoBERTa fine-tuning + tokenizer |
 | torch | 2.3.0 | Model training backend |
 | datasets | 2.19.2 | HuggingFace dataset loading |
