@@ -20,7 +20,7 @@
 | Package | Version | Purpose |
 |---------|---------|---------|
 | pyspark | 4.1.1 | Distributed data processing |
-| delta-spark | 3.3.0 | Delta Lake on local/S3 |
+| delta-spark | 4.1.0 | Delta Lake on local/S3 |
 | pandas | 2.2.2 | Small data, ingestion helpers |
 | pyarrow | 16.0.0 | Parquet / Delta serialization |
 | transformers | 4.41.2 | RoBERTa fine-tuning + tokenizer |
