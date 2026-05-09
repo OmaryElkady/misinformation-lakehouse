@@ -46,22 +46,22 @@ def _make_pyspark_modules() -> dict:
     mock_dt.isDeltaTable.return_value = False
 
     col_mock = _FakeColumn()
-    mock_F = MagicMock()
+    mock_f = MagicMock()
     for attr in (
         "col", "length", "trim", "regexp_replace", "hash", "pmod",
         "split", "size", "lower", "when", "lit", "udf", "current_timestamp",
     ):
-        getattr(mock_F, attr).return_value = col_mock
+        getattr(mock_f, attr).return_value = col_mock
 
     # `from pyspark.sql import functions` resolves via getattr on the pyspark.sql
     # module object, not via sys.modules lookup, so we must wire it explicitly.
     pyspark_sql_mock = MagicMock()
-    pyspark_sql_mock.functions = mock_F
+    pyspark_sql_mock.functions = mock_f
 
     modules = {
         "pyspark": MagicMock(),
         "pyspark.sql": pyspark_sql_mock,
-        "pyspark.sql.functions": mock_F,
+        "pyspark.sql.functions": mock_f,
         "pyspark.sql.types": MagicMock(),
         "delta": MagicMock(),
         "delta.tables": MagicMock(),

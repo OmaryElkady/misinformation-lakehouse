@@ -9,7 +9,6 @@ from httpx import ASGITransport, AsyncClient
 from src.serving.app import app
 from src.serving.model_loader import ModelLoader
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
 

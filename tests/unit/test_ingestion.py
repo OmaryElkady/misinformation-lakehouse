@@ -179,14 +179,14 @@ def _make_pyspark_modules() -> dict:
     mock_dt.isDeltaTable.return_value = False
 
     col_mock = _ColumnMock()
-    mock_F = MagicMock()
+    mock_f = MagicMock()
     for attr in ("col", "length", "trim", "regexp_replace", "hash", "pmod"):
-        getattr(mock_F, attr).return_value = col_mock
+        getattr(mock_f, attr).return_value = col_mock
 
     modules = {
         "pyspark": MagicMock(),
         "pyspark.sql": MagicMock(),
-        "pyspark.sql.functions": mock_F,
+        "pyspark.sql.functions": mock_f,
         "pyspark.sql.types": MagicMock(),
         "delta": MagicMock(),
         "delta.tables": MagicMock(),
