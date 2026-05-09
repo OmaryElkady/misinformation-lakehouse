@@ -26,7 +26,7 @@ pytest tests/unit/ -v
 
 ```
 src/
-  ingestion/       # LIAR dataset + Reddit API → Bronze Delta table
+  ingestion/       # LIAR dataset + FakeNewsNet → Bronze Delta table
   processing/      # Bronze → Silver → Gold PySpark jobs
   training/        # RoBERTa fine-tune + MLflow experiment tracking
   serving/         # FastAPI inference server
@@ -66,6 +66,9 @@ tests/
 - Never call `os.getenv()` anywhere — all config goes through `src/config.py`
 - Training is three-phase (no local GPU): (1) run `export_gold_to_parquet()` locally, (2) run `notebooks/colab_training.ipynb` on Colab with an ngrok tunnel to local MLflow, (3) run `register_model(run_id)` locally — see `scripts/setup_colab.md`
 - Model is promoted to Production only if `eval_f1 >= 0.80`; otherwise it lands in Staging
+- `ModelLoader.load()` never raises — it catches all exceptions and logs them, leaving `loaded=False`; the app always starts even when MLflow is unreachable
+- The serving layer uses a lifespan context manager (`@asynccontextmanager async def lifespan`) — never `@app.on_event`, which is deprecated in FastAPI 0.111
+- mlflow is imported lazily inside `ModelLoader.load()` (not at module level) — this avoids import failures in envs where `setuptools >= 80` has removed `pkg_resources`
 
 ---
 

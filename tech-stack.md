@@ -41,6 +41,11 @@
 | python-dotenv | 1.0.1 | .env file loading |
 | loguru | 0.7.2 | Structured logging |
 
+> **setuptools compatibility:** `mlflow==2.13.0` calls `import pkg_resources` at import time.
+> `setuptools >= 80` removed `pkg_resources` as a standalone module, which breaks the mlflow
+> import and prevents pytest from collecting serving tests. Pin `setuptools<80` in the venv, or
+> keep mlflow imports lazy (inside functions) in `src/serving/` — which is what the codebase does.
+
 ---
 
 ## Approved Libraries

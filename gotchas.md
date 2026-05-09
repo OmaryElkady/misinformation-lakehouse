@@ -9,6 +9,8 @@
 ## Never Do This
 
 - Do NOT use `os.getenv()` directly — always import `settings` from `src/config.py`
+- Do NOT use `@app.on_event("startup")` in FastAPI — use the `lifespan` context manager; `on_event` is deprecated in FastAPI 0.111 and removed in later versions
+- Do NOT import `mlflow` at the top of any file in `src/serving/` — import it lazily inside the function that needs it; `setuptools >= 80` removes `pkg_resources` and breaks the mlflow module-level import, which prevents test collection
 - Do NOT call `SparkSession.builder` inline — always use `get_spark()` from `src/spark_session.py`
 - Do NOT write integration tests without `@pytest.mark.skip` — they must never run in CI
 - Do NOT add new environment variables without also adding them to `.env.example` AND `src/config.py`
@@ -33,6 +35,38 @@
 - The `settings` object in `src/config.py` is a singleton — import it, don't instantiate `Settings()` again
 - Unit tests must not import PySpark — if a test needs Spark it belongs in `tests/integration/`
 - `docker compose up` starts MLflow on port 5000, Prefect on 4200, and the API on 8000 — don't change these ports
+
+---
+
+## Serving Unit Test Mocking — Two Different Patterns
+
+Endpoint tests and `ModelLoader` unit tests require different mock strategies.
+
+**Pattern 1 — endpoint tests**: patch the module-level singleton in `app.py`
+
+```python
+with patch("src.serving.app.model_loader") as mock_loader:
+    mock_loader.loaded = True
+    mock_loader.predict.return_value = ("misinformation", 0.92)
+    ...
+```
+
+This also silences the lifespan's `model_loader.load()` call (the mock's `load()` is a no-op).
+
+**Pattern 2 — ModelLoader.load() unit tests**: mlflow is imported lazily *inside* `load()`,
+so there is no `src.serving.model_loader.mlflow` name to patch. Inject mocks via `sys.modules`
+*before* the import runs:
+
+```python
+mock_tracking = MagicMock()
+mock_tracking.MlflowClient.return_value = mock_client  # or .side_effect = Exception(...)
+
+with patch.dict(sys.modules, {"mlflow": MagicMock(), "mlflow.tracking": mock_tracking}):
+    loader.load()
+```
+
+`from mlflow.tracking import MlflowClient` resolves via `sys.modules`, so the mock intercepts
+it without needing the real mlflow to be importable at all.
 
 ---
 

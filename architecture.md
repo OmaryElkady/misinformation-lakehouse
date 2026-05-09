@@ -61,7 +61,8 @@ FakeNewsNet ─────┘    Delta Table
 | Training — export | `src/training/train.py::export_gold_to_parquet` | Read Gold Delta → write train/val parquets locally |
 | Training — fine-tune | `src/training/train.py::train` | Run on Colab; reads parquets, fine-tunes, logs to MLflow via ngrok |
 | Training — registry | `src/training/train.py::register_model` | Run locally after Colab; registers + promotes model |
-| API server | `src/serving/app.py` | FastAPI inference endpoint |
+| Model loader | `src/serving/model_loader.py` | Loads RoBERTa pipeline from MLflow registry (Production → Staging fallback); never raises |
+| API server | `src/serving/app.py` | FastAPI inference endpoint — delegates ML logic to ModelLoader, explanations to Groq |
 | Pipeline | `src/orchestration/pipeline.py` | Prefect flow wiring all steps |
 | Model gate | `scripts/validate_model.py` | CI quality threshold check |
 
