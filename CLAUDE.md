@@ -64,13 +64,16 @@ tests/
 - MLflow model registry name is always `"misinformation-roberta-v1"`
 - Never call `SparkSession.builder` inline — always use `get_spark()` from `src/spark_session.py`
 - Never call `os.getenv()` anywhere — all config goes through `src/config.py`
+- Training is three-phase (no local GPU): (1) run `export_gold_to_parquet()` locally, (2) run `notebooks/colab_training.ipynb` on Colab with an ngrok tunnel to local MLflow, (3) run `register_model(run_id)` locally — see `scripts/setup_colab.md`
+- Model is promoted to Production only if `eval_f1 >= 0.80`; otherwise it lands in Staging
 
 ---
 
 ## Steering Files
 
-- `gotchas.md` — mistakes to avoid in this codebase
+- `gotchas.md` — mistakes to avoid in this codebase (includes PySpark mock traps)
 - `architecture.md` — data flow and module responsibilities
 - `tech-stack.md` — pinned versions and approved libraries
+- `scripts/setup_colab.md` — step-by-step Colab training walkthrough
 
 

@@ -58,7 +58,9 @@ FakeNewsNet ─────┘    Delta Table
 | Static ingestion | `src/ingestion/ingest_static.py` | Load LIAR/FakeNewsNet via HuggingFace → Bronze Delta |
 | Bronze→Silver | `src/processing/bronze_to_silver.py` | Clean, deduplicate, normalize labels |
 | Silver→Gold | `src/processing/silver_to_gold.py` | Feature engineering, sentiment, TF-IDF |
-| Training | `src/training/train.py` | Fine-tune RoBERTa, log to MLflow |
+| Training — export | `src/training/train.py::export_gold_to_parquet` | Read Gold Delta → write train/val parquets locally |
+| Training — fine-tune | `src/training/train.py::train` | Run on Colab; reads parquets, fine-tunes, logs to MLflow via ngrok |
+| Training — registry | `src/training/train.py::register_model` | Run locally after Colab; registers + promotes model |
 | API server | `src/serving/app.py` | FastAPI inference endpoint |
 | Pipeline | `src/orchestration/pipeline.py` | Prefect flow wiring all steps |
 | Model gate | `scripts/validate_model.py` | CI quality threshold check |
@@ -72,6 +74,7 @@ FakeNewsNet ─────┘    Delta Table
 - **Spark factory** — `get_spark()` is called once per job. Never build a session inline.
 - **Storage abstraction** — `settings.delta_path("bronze/silver/gold")` resolves to local or S3 based on `STORAGE_MODE`. All path references go through this method.
 - **MLflow lifecycle** — every training run logs params, metrics, and artifacts. Model is registered and promoted via the registry, never loaded from a file path directly.
+- **Two-phase training** — GPU training runs on Google Colab, not locally. Phase 1 (local): `export_gold_to_parquet()` writes `data/exports/train.parquet` + `val.parquet`. Phase 2 (Colab): `notebooks/colab_training.ipynb` reads those parquets, fine-tunes, and logs to the local MLflow server via an ngrok tunnel. Phase 3 (local): `register_model(run_id)` promotes the result. See `scripts/setup_colab.md` for the full walkthrough.
 
 ---
 

@@ -33,3 +33,54 @@
 - The `settings` object in `src/config.py` is a singleton — import it, don't instantiate `Settings()` again
 - Unit tests must not import PySpark — if a test needs Spark it belongs in `tests/integration/`
 - `docker compose up` starts MLflow on port 5000, Prefect on 4200, and the API on 8000 — don't change these ports
+
+---
+
+## PySpark Unit Test Mocking — Two Known Traps
+
+**Trap 1 — Subclassing MagicMock to override comparison operators does NOT work.**
+
+`MagicMock.__init__` calls `_mock_set_magics()` which rewrites every class-level dunder method
+(including `__gt__`, `__lt__`, etc.) with a `MagicProxy`. This silently discards your override.
+
+```python
+# WRONG — __gt__ will be replaced by MagicProxy at runtime
+class _ColumnMock(MagicMock):
+    def __gt__(self, other): return MagicMock()
+
+# CORRECT — plain Python class, no metaclass interference
+class _FakeColumn:
+    def __gt__(self, other): return _FakeColumn()
+    def __lt__(self, other): return _FakeColumn()
+    def __ge__(self, other): return _FakeColumn()
+    def __le__(self, other): return _FakeColumn()
+    def __and__(self, other): return _FakeColumn()
+    def __or__(self, other): return _FakeColumn()
+    def __sub__(self, other): return _FakeColumn()
+    def __truediv__(self, other): return _FakeColumn()
+    def __call__(self, *a, **k): return _FakeColumn()
+    def __getattr__(self, name): return lambda *a, **k: _FakeColumn()
+```
+
+Use `_FakeColumn` instances as the `return_value` for `mock_F.col`, `mock_F.length`, etc.
+
+**Trap 2 — `sys.modules` patching alone does not wire up `from pyspark.sql import functions as F`.**
+
+Python resolves `from pyspark.sql import functions` via `getattr(pyspark_sql_module, "functions")`,
+not by looking up `sys.modules["pyspark.sql.functions"]` directly. Since `pyspark.sql` in
+sys.modules is a `MagicMock`, `getattr(mock, "functions")` returns an auto-generated attribute —
+NOT your configured `mock_F`.
+
+```python
+# WRONG — F inside run() will be an auto-generated MagicMock, not mock_F
+modules = {"pyspark.sql.functions": mock_F, ...}
+
+# CORRECT — also set the attribute on the pyspark.sql mock object
+pyspark_sql_mock = MagicMock()
+pyspark_sql_mock.functions = mock_F
+modules = {
+    "pyspark.sql": pyspark_sql_mock,
+    "pyspark.sql.functions": mock_F,
+    ...
+}
+```

@@ -25,7 +25,10 @@
 | pyarrow | 15.0.2 | Parquet / Delta serialization |
 | transformers | 4.41.2 | RoBERTa fine-tuning + tokenizer |
 | torch | 2.3.0 | Model training backend |
+| accelerate | 0.30.0 | Multi-GPU / mixed-precision support for HuggingFace Trainer |
 | datasets | 2.19.2 | HuggingFace dataset loading |
+| scikit-learn | 1.5.0 | Metrics (f1, precision, recall, confusion matrix) — training + tests |
+| matplotlib | 3.9.0 | Confusion matrix PNG artifact logged to MLflow |
 | mlflow | 2.13.0 | Experiment tracking + model registry |
 | groq | 0.9.0 | Llama 3 inference (free tier) |
 | prefect | 2.19.5 | Pipeline orchestration |
