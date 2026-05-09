@@ -174,9 +174,7 @@ class TestExportGoldToParquet:
         train_pd = pd.DataFrame(
             {"text_clean": ["claim"] * train_rows, "label_binary": [0] * train_rows}
         )
-        val_pd = pd.DataFrame(
-            {"text_clean": ["claim"] * val_rows, "label_binary": [1] * val_rows}
-        )
+        val_pd = pd.DataFrame({"text_clean": ["claim"] * val_rows, "label_binary": [1] * val_rows})
 
         mock_df = MagicMock()
         # filter returns mock_df, select returns it, toPandas returns real DataFrames in order

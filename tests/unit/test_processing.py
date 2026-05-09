@@ -23,21 +23,50 @@ class _FakeColumn:
     Using a plain class avoids that metaclass interference entirely.
     """
 
-    def __gt__(self, other): return _FakeColumn()
-    def __lt__(self, other): return _FakeColumn()
-    def __ge__(self, other): return _FakeColumn()
-    def __le__(self, other): return _FakeColumn()
-    def __eq__(self, other): return _FakeColumn()  # type: ignore[override]
-    def __ne__(self, other): return _FakeColumn()  # type: ignore[override]
-    def __sub__(self, other): return _FakeColumn()
-    def __add__(self, other): return _FakeColumn()
-    def __truediv__(self, other): return _FakeColumn()
-    def __and__(self, other): return _FakeColumn()
-    def __or__(self, other): return _FakeColumn()
-    def __invert__(self): return _FakeColumn()
-    def __bool__(self): return True
-    def __call__(self, *a, **k): return _FakeColumn()
-    def __getattr__(self, name): return lambda *a, **k: _FakeColumn()
+    def __gt__(self, other):
+        return _FakeColumn()
+
+    def __lt__(self, other):
+        return _FakeColumn()
+
+    def __ge__(self, other):
+        return _FakeColumn()
+
+    def __le__(self, other):
+        return _FakeColumn()
+
+    def __eq__(self, other):
+        return _FakeColumn()  # type: ignore[override]
+
+    def __ne__(self, other):
+        return _FakeColumn()  # type: ignore[override]
+
+    def __sub__(self, other):
+        return _FakeColumn()
+
+    def __add__(self, other):
+        return _FakeColumn()
+
+    def __truediv__(self, other):
+        return _FakeColumn()
+
+    def __and__(self, other):
+        return _FakeColumn()
+
+    def __or__(self, other):
+        return _FakeColumn()
+
+    def __invert__(self):
+        return _FakeColumn()
+
+    def __bool__(self):
+        return True
+
+    def __call__(self, *a, **k):
+        return _FakeColumn()
+
+    def __getattr__(self, name):
+        return lambda *a, **k: _FakeColumn()
 
 
 def _make_pyspark_modules() -> dict:
@@ -48,8 +77,19 @@ def _make_pyspark_modules() -> dict:
     col_mock = _FakeColumn()
     mock_f = MagicMock()
     for attr in (
-        "col", "length", "trim", "regexp_replace", "hash", "pmod",
-        "split", "size", "lower", "when", "lit", "udf", "current_timestamp",
+        "col",
+        "length",
+        "trim",
+        "regexp_replace",
+        "hash",
+        "pmod",
+        "split",
+        "size",
+        "lower",
+        "when",
+        "lit",
+        "udf",
+        "current_timestamp",
     ):
         getattr(mock_f, attr).return_value = col_mock
 

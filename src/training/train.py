@@ -139,9 +139,7 @@ def train(experiment_name: str | None = None) -> str:
         .map(_tokenize, batched=True)
     )
 
-    model = AutoModelForSequenceClassification.from_pretrained(
-        MODEL_CHECKPOINT, num_labels=2
-    )
+    model = AutoModelForSequenceClassification.from_pretrained(MODEL_CHECKPOINT, num_labels=2)
 
     output_dir = "./data/models/roberta-v1"
     training_args = TrainingArguments(
