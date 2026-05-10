@@ -27,7 +27,9 @@ except Exception:
 # ── Module-level singletons ───────────────────────────────────────────────────
 
 model_loader = ModelLoader()
-groq_client = Groq(api_key=settings.groq_api_key) if (settings.groq_api_key and Groq is not None) else None
+groq_client = (
+    Groq(api_key=settings.groq_api_key) if (settings.groq_api_key and Groq is not None) else None
+)
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
