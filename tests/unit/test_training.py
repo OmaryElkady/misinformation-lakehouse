@@ -93,11 +93,11 @@ class TestRegisterModel:
         mock_result = MagicMock()
         mock_result.version = version
 
-        with (
-            patch("mlflow.set_tracking_uri"),
-            patch("mlflow.register_model", return_value=mock_result),
-            patch("mlflow.MlflowClient", return_value=mock_client),
-        ):
+        mock_mlflow = MagicMock()
+        mock_mlflow.register_model.return_value = mock_result
+        mock_mlflow.MlflowClient.return_value = mock_client
+
+        with patch.dict(sys.modules, {"mlflow": mock_mlflow, "mlflow.tracking": MagicMock()}):
             register_model("fake-run-id")
 
     def test_promotes_to_production_when_f1_above_threshold(self):
@@ -139,16 +139,18 @@ class TestRegisterModel:
         mock_result = MagicMock()
         mock_result.version = "1"
 
-        with (
-            patch("mlflow.set_tracking_uri"),
-            patch("mlflow.register_model", return_value=mock_result) as mock_register,
-            patch("mlflow.MlflowClient", return_value=client),
-        ):
+        mock_mlflow = MagicMock()
+        mock_mlflow.register_model.return_value = mock_result
+        mock_mlflow.MlflowClient.return_value = client
+
+        with patch.dict(sys.modules, {"mlflow": mock_mlflow, "mlflow.tracking": MagicMock()}):
             from src.training.train import register_model
 
             register_model("my-run-id")
 
-        mock_register.assert_called_once_with("runs:/my-run-id/model", "misinformation-roberta-v1")
+        mock_mlflow.register_model.assert_called_once_with(
+            "runs:/my-run-id/model", "misinformation-roberta-v1"
+        )
 
 
 # ── export_gold_to_parquet ─────────────────────────────────────────────────────

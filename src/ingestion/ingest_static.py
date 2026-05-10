@@ -19,8 +19,14 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from datasets import load_dataset
 from loguru import logger
+
+# datasets is a heavy HuggingFace library not installed in CI's minimal env.
+# The name must exist at module level so tests can patch it.
+try:
+    from datasets import load_dataset
+except ImportError:
+    load_dataset = None  # type: ignore[assignment]
 
 from src.config import settings
 
