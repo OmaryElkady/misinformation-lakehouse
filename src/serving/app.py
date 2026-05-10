@@ -5,12 +5,17 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException
-from groq import Groq
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from src.config import settings
 from src.serving.model_loader import ModelLoader
+
+# groq may not be installed in all environments (e.g. CI minimal install).
+try:
+    from groq import Groq
+except ImportError:
+    Groq = None  # type: ignore[assignment, misc]
 
 # mlflow may not be importable in all environments (e.g. pkg_resources missing).
 # Import gracefully so the app still starts; tests patch this name directly.
@@ -22,7 +27,7 @@ except Exception:
 # ── Module-level singletons ───────────────────────────────────────────────────
 
 model_loader = ModelLoader()
-groq_client: Groq | None = Groq(api_key=settings.groq_api_key) if settings.groq_api_key else None
+groq_client = Groq(api_key=settings.groq_api_key) if (settings.groq_api_key and Groq is not None) else None
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
