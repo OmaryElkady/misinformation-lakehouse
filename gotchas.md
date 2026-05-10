@@ -11,6 +11,7 @@
 - Do NOT use `os.getenv()` directly — always import `settings` from `src/config.py`
 - Do NOT use `@app.on_event("startup")` in FastAPI — use the `lifespan` context manager; `on_event` is deprecated in FastAPI 0.111 and removed in later versions
 - Do NOT import `mlflow` at the top of any file in `src/serving/` — import it lazily inside the function that needs it; `setuptools >= 80` removes `pkg_resources` and breaks the mlflow module-level import, which prevents test collection
+- Do NOT add `from datasets import load_dataset` or `from groq import Groq` as bare module-level imports — wrap them in `try/except ImportError` so the module loads in CI's minimal env; the fallback `= None` keeps the name available for `patch()` in tests
 - Do NOT call `SparkSession.builder` inline — always use `get_spark()` from `src/spark_session.py`
 - Do NOT write integration tests without `@pytest.mark.skip` — they must never run in CI
 - Do NOT add new environment variables without also adding them to `.env.example` AND `src/config.py`
@@ -35,6 +36,31 @@
 - The `settings` object in `src/config.py` is a singleton — import it, don't instantiate `Settings()` again
 - Unit tests must not import PySpark — if a test needs Spark it belongs in `tests/integration/`
 - `docker compose up` starts MLflow on port 5000, Prefect on 4200, and the API on 8000 — don't change these ports
+
+---
+
+## `patch()` Requires the Module to Be Importable
+
+`unittest.mock.patch("pkg.attr")` calls `importlib.import_module("pkg")` internally to find the
+attribute to replace. If the package isn't installed, it raises `ModuleNotFoundError` even when
+the function under test only imports that package lazily.
+
+**Fix:** inject the module into `sys.modules` before patching:
+
+```python
+# WRONG — fails if mlflow not installed, even though register_model() imports it lazily
+with patch("mlflow.set_tracking_uri"), patch("mlflow.register_model", ...):
+    register_model(run_id)
+
+# CORRECT — pre-populate sys.modules; lazy imports inside the function see the mock
+mock_mlflow = MagicMock()
+mock_mlflow.register_model.return_value = mock_result
+mock_mlflow.MlflowClient.return_value = mock_client
+with patch.dict(sys.modules, {"mlflow": mock_mlflow, "mlflow.tracking": MagicMock()}):
+    register_model(run_id)
+```
+
+This applies to any lazily-imported dep: `mlflow`, `datasets`, `groq`, `pyspark`, etc.
 
 ---
 

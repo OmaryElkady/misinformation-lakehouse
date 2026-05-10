@@ -69,6 +69,8 @@ tests/
 - `ModelLoader.load()` never raises — it catches all exceptions and logs them, leaving `loaded=False`; the app always starts even when MLflow is unreachable
 - The serving layer uses a lifespan context manager (`@asynccontextmanager async def lifespan`) — never `@app.on_event`, which is deprecated in FastAPI 0.111
 - mlflow is imported lazily inside `ModelLoader.load()` (not at module level) — this avoids import failures in envs where `setuptools >= 80` has removed `pkg_resources`
+- `groq` and `datasets` are also optional at import time — both are wrapped in `try/except ImportError` at module level so CI's minimal install doesn't crash; the fallback `= None` keeps the name patchable in tests
+- The serving Dockerfile must include `pydantic-settings` — `src/config.py` imports it at module level and the container won't start without it
 
 ---
 
