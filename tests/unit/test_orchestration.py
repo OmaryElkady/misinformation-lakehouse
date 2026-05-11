@@ -8,7 +8,7 @@ No real Spark, no Prefect server, no network — all external deps are mocked.
 from __future__ import annotations
 
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -19,8 +19,8 @@ import pytest
 def _make_task_decorator(*args, **kwargs):
     """Return a decorator that wraps each function in a unique MagicMock.
 
-    Each call to @task(...) returns a fresh decorator so every task function
-    in pipeline.py gets its own MagicMock (with independent .submit() state).
+    Each @task(...) call gets its own decorator so every task in pipeline.py
+    gets an independent MagicMock with isolated .submit() state.
     """
 
     def decorator(fn):
@@ -29,26 +29,35 @@ def _make_task_decorator(*args, **kwargs):
     return decorator
 
 
-def _make_prefect_mods() -> dict:
-    """Build sys.modules entries that satisfy all Prefect imports in pipeline.py.
+def _make_flow_decorator(*args, **kwargs):
+    """Return a decorator that wraps the flow function in a callable object.
 
-    @flow(name=...)(fn) → fn           (flow body executes as plain Python)
-    @task(name=...)(fn) → MagicMock()  (each task gets an independent mock)
-    allow_failure(x)    → x            (pass-through; wait_for is handled by mock)
+    The object:
+    - is callable (runs the original flow body)
+    - has .deploy() as an AsyncMock (for schedules tests)
     """
+
+    def decorator(fn):
+        mock_deploy = AsyncMock()
+
+        class _MockFlow:
+            def __call__(self, *a, **kw):
+                return fn(*a, **kw)
+
+        obj = _MockFlow()
+        obj.deploy = mock_deploy
+        return obj
+
+    return decorator
+
+
+def _make_prefect_mods() -> dict:
+    """Build sys.modules entries that satisfy all Prefect imports in pipeline.py."""
     mock_prefect = MagicMock()
-    mock_prefect.flow.return_value = lambda f: f
+    mock_prefect.flow.side_effect = _make_flow_decorator
     mock_prefect.task.side_effect = _make_task_decorator
 
-    mock_futures = MagicMock()
-    mock_futures.allow_failure.side_effect = lambda x: x
-
-    return {
-        "prefect": mock_prefect,
-        "prefect.futures": mock_futures,
-        "prefect.deployments": MagicMock(),
-        "prefect.schedules": MagicMock(),
-    }
+    return {"prefect": mock_prefect}
 
 
 # ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -73,20 +82,31 @@ def pipeline_mod():
 
 
 @pytest.fixture
-def schedule_deploy_result():
-    """Run schedules.deploy() with mocked Prefect and return captured mocks.
+def schedule_deploy_mock():
+    """Run schedules.deploy() and return the AsyncMock for run_pipeline.deploy().
 
-    Returns (mock_deployments, mock_schedules) whose call history can be
-    inspected after deploy() has run.
+    Captures the mock so tests can inspect call count and arguments.
     """
     mods = _make_prefect_mods()
-    mock_deployments = MagicMock()
-    mock_schedules = MagicMock()
-    mods["prefect.deployments"] = mock_deployments
-    mods["prefect.schedules"] = mock_schedules
 
     for key in ("src.orchestration.pipeline", "src.orchestration.schedules"):
         sys.modules.pop(key, None)
+
+    captured: dict = {}
+
+    original_flow_side_effect = mods["prefect"].flow.side_effect
+
+    def capturing_flow_decorator(*args, **kwargs):
+        decorator = original_flow_side_effect(*args, **kwargs)
+
+        def capturing_decorator(fn):
+            obj = decorator(fn)
+            captured["deploy_mock"] = obj.deploy
+            return obj
+
+        return capturing_decorator
+
+    mods["prefect"].flow.side_effect = capturing_flow_decorator
 
     with patch.dict(sys.modules, mods):
         from src.orchestration.schedules import deploy
@@ -96,7 +116,7 @@ def schedule_deploy_result():
     for key in ("src.orchestration.pipeline", "src.orchestration.schedules"):
         sys.modules.pop(key, None)
 
-    return mock_deployments, mock_schedules
+    return captured["deploy_mock"]
 
 
 # ── Flow structure tests ───────────────────────────────────────────────────────
@@ -128,9 +148,7 @@ class TestRunPipelineStructure:
         assert result["status"] == "partial"
 
     def test_status_failed_when_bronze_to_silver_fails(self, pipeline_mod):
-        fail_future = MagicMock()
-        fail_future.result.side_effect = RuntimeError("Spark job crashed")
-        pipeline_mod.bronze_to_silver_task.submit.return_value = fail_future
+        pipeline_mod.bronze_to_silver_task.side_effect = RuntimeError("Spark job crashed")
 
         result = pipeline_mod.run_pipeline()
 
@@ -160,6 +178,13 @@ class TestRunPipelineStructure:
 
         assert "ingest_bluesky" in result["tasks_failed"]
 
+    def test_silver_to_gold_skipped_when_bronze_to_silver_fails(self, pipeline_mod):
+        pipeline_mod.bronze_to_silver_task.side_effect = RuntimeError("b2s error")
+
+        pipeline_mod.run_pipeline()
+
+        pipeline_mod.silver_to_gold_task.assert_not_called()
+
     def test_duration_seconds_is_positive_float(self, pipeline_mod):
         result = pipeline_mod.run_pipeline()
 
@@ -185,12 +210,12 @@ class TestRunPipelineParameters:
     def test_run_processing_false_skips_bronze_to_silver(self, pipeline_mod):
         pipeline_mod.run_pipeline(run_processing=False)
 
-        pipeline_mod.bronze_to_silver_task.submit.assert_not_called()
+        pipeline_mod.bronze_to_silver_task.assert_not_called()
 
     def test_run_processing_false_skips_silver_to_gold(self, pipeline_mod):
         pipeline_mod.run_pipeline(run_processing=False)
 
-        pipeline_mod.silver_to_gold_task.submit.assert_not_called()
+        pipeline_mod.silver_to_gold_task.assert_not_called()
 
     def test_run_bluesky_false_skips_only_bluesky(self, pipeline_mod):
         pipeline_mod.run_pipeline(run_bluesky=False)
@@ -201,8 +226,8 @@ class TestRunPipelineParameters:
     def test_run_bluesky_false_does_not_skip_processing(self, pipeline_mod):
         pipeline_mod.run_pipeline(run_bluesky=False)
 
-        pipeline_mod.bronze_to_silver_task.submit.assert_called_once()
-        pipeline_mod.silver_to_gold_task.submit.assert_called_once()
+        pipeline_mod.bronze_to_silver_task.assert_called_once()
+        pipeline_mod.silver_to_gold_task.assert_called_once()
 
     def test_limit_bluesky_passed_to_task(self, pipeline_mod):
         pipeline_mod.run_pipeline(limit_bluesky=50)
@@ -215,40 +240,27 @@ class TestRunPipelineParameters:
 
 @pytest.mark.unit
 class TestSchedulesDeploy:
-    def test_deploy_creates_two_deployments(self, schedule_deploy_result):
-        mock_deployments, _ = schedule_deploy_result
+    def test_deploy_creates_two_deployments(self, schedule_deploy_mock):
+        assert schedule_deploy_mock.call_count == 2
 
-        assert mock_deployments.Deployment.build_from_flow.call_count == 2
+    def test_deploy_calls_apply_on_both_deployments(self, schedule_deploy_mock):
+        # deploy() awaits run_pipeline.deploy() twice; the mock records both calls
+        assert schedule_deploy_mock.call_count == 2
 
-    def test_deploy_calls_apply_on_both_deployments(self, schedule_deploy_result):
-        mock_deployments, _ = schedule_deploy_result
+    def test_daily_pipeline_has_cron_schedule(self, schedule_deploy_mock):
+        calls = schedule_deploy_mock.call_args_list
+        daily_call = next(c for c in calls if c.kwargs.get("name") == "daily-full-pipeline")
+        assert daily_call.kwargs.get("cron") == "0 2 * * *"
 
-        assert mock_deployments.Deployment.build_from_flow.return_value.apply.call_count == 2
+    def test_manual_processing_has_no_schedule(self, schedule_deploy_mock):
+        calls = schedule_deploy_mock.call_args_list
+        manual_call = next(c for c in calls if c.kwargs.get("name") == "manual-processing-only")
+        assert "cron" not in manual_call.kwargs
 
-    def test_daily_pipeline_has_cron_schedule(self, schedule_deploy_result):
-        _, mock_schedules = schedule_deploy_result
-
-        mock_schedules.CronSchedule.assert_called_once_with("0 2 * * *")
-
-    def test_manual_processing_has_no_schedule(self, schedule_deploy_result):
-        mock_deployments, _ = schedule_deploy_result
-
-        calls = mock_deployments.Deployment.build_from_flow.call_args_list
-        manual_call = next(
-            c for c in calls if c.kwargs.get("name") == "manual-processing-only"
-        )
-        assert "schedule" not in manual_call.kwargs
-
-    def test_daily_pipeline_name_is_correct(self, schedule_deploy_result):
-        mock_deployments, _ = schedule_deploy_result
-
-        calls = mock_deployments.Deployment.build_from_flow.call_args_list
-        names = [c.kwargs.get("name") for c in calls]
+    def test_daily_pipeline_name_is_correct(self, schedule_deploy_mock):
+        names = [c.kwargs.get("name") for c in schedule_deploy_mock.call_args_list]
         assert "daily-full-pipeline" in names
 
-    def test_manual_deployment_name_is_correct(self, schedule_deploy_result):
-        mock_deployments, _ = schedule_deploy_result
-
-        calls = mock_deployments.Deployment.build_from_flow.call_args_list
-        names = [c.kwargs.get("name") for c in calls]
+    def test_manual_deployment_name_is_correct(self, schedule_deploy_mock):
+        names = [c.kwargs.get("name") for c in schedule_deploy_mock.call_args_list]
         assert "manual-processing-only" in names
