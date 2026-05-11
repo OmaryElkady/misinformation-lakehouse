@@ -96,6 +96,89 @@ it without needing the real mlflow to be importable at all.
 
 ---
 
+## Prefect 3.x API — Removed and Changed APIs
+
+**Never use Prefect 2.x deployment API.** It does not exist in Prefect 3.x:
+
+```python
+# WRONG — Prefect 2.x only; raises ImportError on Prefect 3.x
+from prefect.deployments import Deployment
+from prefect.server.schemas.schedules import CronSchedule
+deployment = Deployment.build_from_flow(flow=run_pipeline, schedule=CronSchedule(...))
+deployment.apply()
+
+# CORRECT — Prefect 3.x
+await run_pipeline.deploy(
+    name="daily-full-pipeline",
+    work_pool_name="default-agent-pool",
+    cron="0 2 * * *",
+    parameters={...},
+)
+```
+
+`flow.deploy()` is a coroutine — wrap the call in `asyncio.run()` when calling from sync code,
+and use `AsyncMock` (not `MagicMock`) when testing it.
+
+---
+
+## Prefect 3.x Unit Test Mocking — Task vs Flow Split
+
+In Prefect 3.x, `@task` returns a `Task` object and `@flow` returns a `Flow` object.
+The mocking strategy differs between them:
+
+- **Tasks called via `.submit()`** (ingest_static, ingest_bluesky): mock as `MagicMock`; the
+  test manipulates `.submit.return_value.result.side_effect` to simulate failure.
+- **Tasks called directly** (bronze_to_silver, silver_to_gold): mock as `MagicMock`; simulate
+  failure with `.side_effect = RuntimeError(...)` directly on the mock, NOT on `.submit(...)`.
+- **Flows** (run_pipeline): wrap in a `_MockFlow` class with `__call__` running the real function
+  body and `.deploy` as an `AsyncMock`.
+
+```python
+# Task decorator mock — each @task(...) call gets its own independent MagicMock
+def _make_task_decorator(*args, **kwargs):
+    def decorator(fn):
+        return MagicMock(name=f"task_{fn.__name__}")
+    return decorator
+
+# Flow decorator mock — callable wrapping real body + AsyncMock .deploy
+def _make_flow_decorator(*args, **kwargs):
+    def decorator(fn):
+        class _MockFlow:
+            def __call__(self, *a, **kw): return fn(*a, **kw)
+        obj = _MockFlow()
+        obj.deploy = AsyncMock()
+        return obj
+    return decorator
+```
+
+---
+
+## Docker Health Checks — No curl in Slim Images
+
+`python:3.11-slim` and `prefecthq/prefect` images do not include `curl`. Health checks using
+`curl -f http://localhost:PORT/health` will always fail with `executable file not found`.
+
+```yaml
+# WRONG
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+
+# CORRECT
+healthcheck:
+  test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+```
+
+---
+
+## MLflow Docker Binding — MLFLOW_HOST Is Required
+
+MLflow ignores `--host 0.0.0.0` in some versions and binds to `127.0.0.1` (loopback) inside
+the container. The port is forwarded to the host but the app isn't listening on it, so all
+connections are refused. Fix: set `MLFLOW_HOST: "0.0.0.0"` as an environment variable in
+`docker-compose.yml` alongside the `--host 0.0.0.0` flag in the command.
+
+---
+
 ## PySpark Unit Test Mocking — Two Known Traps
 
 **Trap 1 — Subclassing MagicMock to override comparison operators does NOT work.**

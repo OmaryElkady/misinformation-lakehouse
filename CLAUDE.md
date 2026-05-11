@@ -16,6 +16,14 @@ pip install -r requirements.txt
 # Start services (MLflow + Prefect + API)
 docker compose up -d
 
+# Register Prefect deployments (one-time, after services are healthy)
+export PREFECT_API_URL=http://localhost:4200/api
+prefect work-pool create default-agent-pool --type process   # first time only
+python -c "from src.orchestration.schedules import deploy; deploy()"
+
+# Start the Prefect worker (keep running in a dedicated terminal)
+prefect worker start --pool default-agent-pool
+
 # Test
 pytest tests/unit/ -v
 ```
@@ -30,9 +38,13 @@ src/
   processing/      # Bronze → Silver → Gold PySpark jobs
   training/        # RoBERTa fine-tune + MLflow experiment tracking
   serving/         # FastAPI inference server
-  orchestration/   # Prefect pipeline flows
+  orchestration/
+    pipeline.py    # Prefect @flow wiring ingest → process steps
+    schedules.py   # deploy() registers daily + manual deployments
   config.py        # ALL env vars loaded here — never use os.getenv() elsewhere
   spark_session.py # SparkSession factory — always use get_spark(), never inline
+scripts/
+  run_pipeline.py  # Typer CLI (full / process-only / ingest-only / status)
 tests/
   unit/            # Fast, no Spark/network — these run in CI
   integration/     # Require Spark locally — skip in CI with @pytest.mark.skip
@@ -71,6 +83,11 @@ tests/
 - mlflow is imported lazily inside `ModelLoader.load()` (not at module level) — this avoids import failures in envs where `setuptools >= 80` has removed `pkg_resources`
 - `groq` and `datasets` are also optional at import time — both are wrapped in `try/except ImportError` at module level so CI's minimal install doesn't crash; the fallback `= None` keeps the name patchable in tests
 - The serving Dockerfile must include `pydantic-settings` — `src/config.py` imports it at module level and the container won't start without it
+- **Prefect 3.x only** — Prefect 2.x is incompatible with Python 3.12 (`pydantic.v1` calls `ForwardRef._evaluate()` with a signature that changed in 3.12); use `prefect>=3.0,<4.0`
+- Prefect 3.x deployment API: use `await flow.deploy(name=..., work_pool_name=..., cron=..., parameters=...)` — `Deployment.build_from_flow()` and `CronSchedule` from `prefect.schedules` do not exist in Prefect 3
+- The work pool `default-agent-pool` must be created once before `deploy()` will succeed: `prefect work-pool create default-agent-pool --type process`
+- Docker health checks must not use `curl` — neither `python:3.11-slim` nor `prefecthq/prefect` images include it; use `python -c "import urllib.request; urllib.request.urlopen(...)"` instead
+- MLflow requires `MLFLOW_HOST: "0.0.0.0"` in `docker-compose.yml` env — without it the server binds to `127.0.0.1` inside the container and is unreachable from the host even with `--host 0.0.0.0` in the command
 
 ---
 

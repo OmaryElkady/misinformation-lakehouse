@@ -63,7 +63,9 @@ FakeNewsNet ─────┘    Delta Table
 | Training — registry | `src/training/train.py::register_model` | Run locally after Colab; registers + promotes model |
 | Model loader | `src/serving/model_loader.py` | Loads RoBERTa pipeline from MLflow registry (Production → Staging fallback); never raises |
 | API server | `src/serving/app.py` | FastAPI inference endpoint — delegates ML logic to ModelLoader, explanations to Groq |
-| Pipeline | `src/orchestration/pipeline.py` | Prefect flow wiring all steps |
+| Pipeline | `src/orchestration/pipeline.py` | Prefect flow wiring ingest → bronze_to_silver → silver_to_gold |
+| Schedules | `src/orchestration/schedules.py` | Registers daily-full-pipeline and manual-processing-only deployments |
+| Pipeline CLI | `scripts/run_pipeline.py` | Typer CLI for running full/process-only/ingest-only/status without Prefect server |
 | Model gate | `scripts/validate_model.py` | CI quality threshold check |
 
 ---
@@ -75,6 +77,7 @@ FakeNewsNet ─────┘    Delta Table
 - **Spark factory** — `get_spark()` is called once per job. Never build a session inline.
 - **Storage abstraction** — `settings.delta_path("bronze/silver/gold")` resolves to local or S3 based on `STORAGE_MODE`. All path references go through this method.
 - **MLflow lifecycle** — every training run logs params, metrics, and artifacts. Model is registered and promoted via the registry, never loaded from a file path directly.
+- **Prefect orchestration** — `pipeline.py` submits ingest_static and ingest_bluesky concurrently via `.submit()`; Bluesky failure is non-critical (status → "partial"). bronze_to_silver and silver_to_gold are called sequentially using `try/except/else` so silver_to_gold is automatically skipped if bronze_to_silver fails. `schedules.py` registers two deployments: `daily-full-pipeline` (cron `0 2 * * *`) and `manual-processing-only` (no schedule). Work pool `default-agent-pool` must exist before `deploy()` runs.
 - **Two-phase training** — GPU training runs on Google Colab, not locally. Phase 1 (local): `export_gold_to_parquet()` writes `data/exports/train.parquet` + `val.parquet`. Phase 2 (Colab): `notebooks/colab_training.ipynb` reads those parquets, fine-tunes, and logs to the local MLflow server via an ngrok tunnel. Phase 3 (local): `register_model(run_id)` promotes the result. See `scripts/setup_colab.md` for the full walkthrough.
 
 ---

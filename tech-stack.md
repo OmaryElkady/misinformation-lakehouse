@@ -31,7 +31,7 @@
 | matplotlib | 3.9.0 | Confusion matrix PNG artifact logged to MLflow |
 | mlflow | 2.13.0 | Experiment tracking + model registry |
 | groq | 0.9.0 | Llama 3 inference (free tier) |
-| prefect | 2.19.5 | Pipeline orchestration |
+| prefect | >=3.0,<4.0 | Pipeline orchestration (3.x required for Python 3.12) |
 | fastapi | 0.111.0 | Inference API server |
 | uvicorn | 0.30.1 | ASGI server for FastAPI |
 | pydantic | 2.7.1 | Data validation |
@@ -45,6 +45,11 @@
 > `setuptools >= 80` removed `pkg_resources` as a standalone module, which breaks the mlflow
 > import and prevents pytest from collecting serving tests. Pin `setuptools<80` in the venv, or
 > keep mlflow imports lazy (inside functions) in `src/serving/` — which is what the codebase does.
+
+> **Prefect + Python 3.12:** Prefect 2.x (including 2.19.5) does not run on Python 3.12 because
+> `pydantic.v1` (bundled in pydantic 2.x) calls `ForwardRef._evaluate()` with a positional
+> `set()` argument that was removed in Python 3.12. Use `prefect>=3.0,<4.0` which ships with
+> native pydantic v2 support. The Docker image is `prefecthq/prefect:3-python3.12`.
 
 ---
 
