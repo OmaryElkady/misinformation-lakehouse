@@ -2,9 +2,9 @@
 pipeline.py — Prefect flow wiring the full lakehouse pipeline.
 
 Flow DAG:
-  ingest_static ┐  (submitted concurrently; bluesky failure is allow_failure)
+  ingest_static ┐  (submitted concurrently; bluesky failure is non-critical)
   ingest_bluesky┘
-        ↓
+        ↓  (both awaited before processing starts)
   bronze_to_silver
         ↓
   silver_to_gold
@@ -17,7 +17,6 @@ from typing import Any
 
 from loguru import logger
 from prefect import flow, task
-from prefect.futures import allow_failure
 
 
 @task(
@@ -93,36 +92,18 @@ def run_pipeline(
         f"run_bluesky={run_bluesky} run_processing={run_processing}"
     )
 
-    # ── Ingestion (concurrent; bluesky failure must not block static) ───────────
+    # ── Ingestion — submit both concurrently, bluesky failure is non-critical ──
     static_future = None
     bluesky_future = None
-    upstream: list = []
 
     if run_ingestion:
         logger.info("Submitting ingest_static")
         static_future = ingest_static_task.submit()
-        upstream.append(allow_failure(static_future))
 
         if run_bluesky:
             logger.info("Submitting ingest_bluesky")
             bluesky_future = ingest_bluesky_task.submit(limit=limit_bluesky)
-            upstream.append(allow_failure(bluesky_future))
 
-    # ── Processing (sequential; b2s waits for ingestion, s2g waits for b2s) ────
-    b2s_future = None
-    s2g_future = None
-
-    if run_processing:
-        logger.info("Submitting bronze_to_silver")
-        b2s_future = (
-            bronze_to_silver_task.submit(wait_for=upstream)
-            if upstream
-            else bronze_to_silver_task.submit()
-        )
-        logger.info("Submitting silver_to_gold")
-        s2g_future = silver_to_gold_task.submit(wait_for=[b2s_future])
-
-    # ── Collect results ─────────────────────────────────────────────────────────
     if static_future is not None:
         try:
             static_future.result()
@@ -141,23 +122,25 @@ def run_pipeline(
             tasks_failed.append("ingest_bluesky")
             logger.warning(f"ingest_bluesky failed (non-critical): {exc}")
 
-    if b2s_future is not None:
+    # ── Processing — sequential: b2s must finish before s2g ────────────────────
+    if run_processing:
+        logger.info("Running bronze_to_silver")
         try:
-            b2s_future.result()
+            bronze_to_silver_task()
             tasks_completed.append("bronze_to_silver")
             logger.info("bronze_to_silver completed")
         except Exception as exc:
             tasks_failed.append("bronze_to_silver")
             logger.error(f"bronze_to_silver failed: {exc}")
-
-    if s2g_future is not None:
-        try:
-            s2g_future.result()
-            tasks_completed.append("silver_to_gold")
-            logger.info("silver_to_gold completed")
-        except Exception as exc:
-            tasks_failed.append("silver_to_gold")
-            logger.error(f"silver_to_gold failed: {exc}")
+        else:
+            logger.info("Running silver_to_gold")
+            try:
+                silver_to_gold_task()
+                tasks_completed.append("silver_to_gold")
+                logger.info("silver_to_gold completed")
+            except Exception as exc:
+                tasks_failed.append("silver_to_gold")
+                logger.error(f"silver_to_gold failed: {exc}")
 
     duration = time.perf_counter() - start
 
