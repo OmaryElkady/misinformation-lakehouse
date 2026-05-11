@@ -8,6 +8,7 @@ No real Spark, no Prefect server, no network — all external deps are mocked.
 from __future__ import annotations
 
 import sys
+import types
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -83,9 +84,15 @@ def pipeline_mod():
 
 @pytest.fixture
 def schedule_deploy_mock():
-    """Run schedules.deploy() and return the AsyncMock for run_pipeline.deploy().
+    """Run schedules.deploy() and return a namespace with to_deployment and apply mocks.
 
-    Captures the mock so tests can inspect call count and arguments.
+    schedules.py calls:
+      deployment = await run_pipeline.to_deployment(name=..., cron=..., parameters=...)
+      await deployment.apply()
+
+    The returned namespace exposes:
+      .to_deployment  — AsyncMock recording every to_deployment() call and its kwargs
+      .apply          — AsyncMock recording every apply() call
     """
     mods = _make_prefect_mods()
 
@@ -101,7 +108,13 @@ def schedule_deploy_mock():
 
         def capturing_decorator(fn):
             obj = decorator(fn)
-            captured["deploy_mock"] = obj.deploy
+            apply_mock = AsyncMock()
+            deployment_mock = MagicMock()
+            deployment_mock.apply = apply_mock
+            to_deployment_mock = AsyncMock(return_value=deployment_mock)
+            obj.to_deployment = to_deployment_mock
+            captured["to_deployment_mock"] = to_deployment_mock
+            captured["apply_mock"] = apply_mock
             return obj
 
         return capturing_decorator
@@ -116,7 +129,10 @@ def schedule_deploy_mock():
     for key in ("src.orchestration.pipeline", "src.orchestration.schedules"):
         sys.modules.pop(key, None)
 
-    return captured["deploy_mock"]
+    return types.SimpleNamespace(
+        to_deployment=captured["to_deployment_mock"],
+        apply=captured["apply_mock"],
+    )
 
 
 # ── Flow structure tests ───────────────────────────────────────────────────────
@@ -241,26 +257,25 @@ class TestRunPipelineParameters:
 @pytest.mark.unit
 class TestSchedulesDeploy:
     def test_deploy_creates_two_deployments(self, schedule_deploy_mock):
-        assert schedule_deploy_mock.call_count == 2
+        assert schedule_deploy_mock.to_deployment.call_count == 2
 
     def test_deploy_calls_apply_on_both_deployments(self, schedule_deploy_mock):
-        # deploy() awaits run_pipeline.deploy() twice; the mock records both calls
-        assert schedule_deploy_mock.call_count == 2
+        assert schedule_deploy_mock.apply.call_count == 2
 
     def test_daily_pipeline_has_cron_schedule(self, schedule_deploy_mock):
-        calls = schedule_deploy_mock.call_args_list
+        calls = schedule_deploy_mock.to_deployment.call_args_list
         daily_call = next(c for c in calls if c.kwargs.get("name") == "daily-full-pipeline")
         assert daily_call.kwargs.get("cron") == "0 2 * * *"
 
     def test_manual_processing_has_no_schedule(self, schedule_deploy_mock):
-        calls = schedule_deploy_mock.call_args_list
+        calls = schedule_deploy_mock.to_deployment.call_args_list
         manual_call = next(c for c in calls if c.kwargs.get("name") == "manual-processing-only")
         assert "cron" not in manual_call.kwargs
 
     def test_daily_pipeline_name_is_correct(self, schedule_deploy_mock):
-        names = [c.kwargs.get("name") for c in schedule_deploy_mock.call_args_list]
+        names = [c.kwargs.get("name") for c in schedule_deploy_mock.to_deployment.call_args_list]
         assert "daily-full-pipeline" in names
 
     def test_manual_deployment_name_is_correct(self, schedule_deploy_mock):
-        names = [c.kwargs.get("name") for c in schedule_deploy_mock.call_args_list]
+        names = [c.kwargs.get("name") for c in schedule_deploy_mock.to_deployment.call_args_list]
         assert "manual-processing-only" in names

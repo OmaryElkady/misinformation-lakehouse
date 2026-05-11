@@ -18,11 +18,11 @@ docker compose up -d
 
 # Register Prefect deployments (one-time, after services are healthy)
 export PREFECT_API_URL=http://localhost:4200/api
-prefect work-pool create default-agent-pool --type process   # first time only
-python -c "from src.orchestration.schedules import deploy; deploy()"
+python3.12 -c "from src.orchestration.schedules import deploy; deploy()"
 
 # Start the Prefect worker (keep running in a dedicated terminal)
-prefect worker start --pool default-agent-pool
+# Note: use python3.12 explicitly — the venv's `python` symlink may point to a different version
+PREFECT_API_URL=http://localhost:4200/api prefect worker start --pool default-agent-pool
 
 # Test
 pytest tests/unit/ -v

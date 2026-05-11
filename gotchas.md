@@ -96,28 +96,49 @@ it without needing the real mlflow to be importable at all.
 
 ---
 
+## WSL Venv — Always Use `python3.12` Explicitly
+
+The `.venv/bin/python` symlink may resolve to the Windows system Python (e.g. 3.14) when
+the project is on a Windows path (`/mnt/c/...`) accessed from WSL. Packages installed with
+`pip install` under the venv go into `site-packages/python3.12/`, not 3.14, so `python` can't
+find them even though `pip list` shows them as installed.
+
+```bash
+# WRONG — may silently use system Python, causing ModuleNotFoundError
+python -c "from src.orchestration.schedules import deploy; deploy()"
+
+# CORRECT — pin the version explicitly
+python3.12 -c "from src.orchestration.schedules import deploy; deploy()"
+```
+
+This also affects `prefect`, `pytest`, and any other venv CLI tool — use the versioned binary
+or activate the venv (`source .venv/bin/activate`) and verify `which python` points inside `.venv`.
+
+---
+
 ## Prefect 3.x API — Removed and Changed APIs
 
-**Never use Prefect 2.x deployment API.** It does not exist in Prefect 3.x:
+**Never use Prefect 2.x deployment API.** It does not exist in Prefect 3.x.
+**Never use `flow.deploy()` for local runner deployments.** It requires an image or remote storage.
 
 ```python
 # WRONG — Prefect 2.x only; raises ImportError on Prefect 3.x
 from prefect.deployments import Deployment
 from prefect.server.schemas.schedules import CronSchedule
-deployment = Deployment.build_from_flow(flow=run_pipeline, schedule=CronSchedule(...))
-deployment.apply()
+Deployment.build_from_flow(flow=run_pipeline, schedule=CronSchedule(...)).apply()
 
-# CORRECT — Prefect 3.x
-await run_pipeline.deploy(
-    name="daily-full-pipeline",
-    work_pool_name="default-agent-pool",
-    cron="0 2 * * *",
-    parameters={...},
-)
+# WRONG — Prefect 3.x flow.deploy() for local code; raises ValueError:
+#   "Either an image or remote storage location must be provided"
+await run_pipeline.deploy(name="...", work_pool_name="...", cron="...")
+
+# CORRECT — Prefect 3.x local runner deployment (to_deployment is also a coroutine)
+deployment = await run_pipeline.to_deployment(name="...", cron="...", parameters={...})
+await deployment.apply()
 ```
 
-`flow.deploy()` is a coroutine — wrap the call in `asyncio.run()` when calling from sync code,
-and use `AsyncMock` (not `MagicMock`) when testing it.
+Both `to_deployment()` and `apply()` are coroutines — await both, and wrap the whole sequence
+in `asyncio.run()` when calling from sync code. Use `AsyncMock` (not `MagicMock`) in tests for
+both of them.
 
 ---
 
