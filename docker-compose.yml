@@ -24,22 +24,24 @@ services:
       - "5000:5000"
     networks:
       - lakehouse-net
+    environment:
+      MLFLOW_HOST: "0.0.0.0"
     command: >
       bash -c "pip install mlflow==2.13.0 --quiet &&
-               mlflow server
+               python -m mlflow server
                --host 0.0.0.0
                --port 5000
                --backend-store-uri sqlite:///mlflow/mlflow.db
                --default-artifact-root /mlflow/mlruns"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 15s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   # ── Prefect Server ─────────────────────────────────────────────────────────
   prefect:
-    image: prefecthq/prefect:2.19.5-python3.11
+    image: prefecthq/prefect:3-python3.12
     container_name: prefect-server
     volumes:
       - prefect-data:/root/.prefect
@@ -51,10 +53,10 @@ services:
     environment:
       PREFECT_API_DATABASE_CONNECTION_URL: "sqlite+aiosqlite:////root/.prefect/prefect.db"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4200/api/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')"]
       interval: 15s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   # ── FastAPI Serving ────────────────────────────────────────────────────────
   api:
@@ -84,7 +86,7 @@ services:
 
   # ── Prefect Worker (runs flows) ────────────────────────────────────────────
   prefect-worker:
-    image: prefecthq/prefect:2.19.5-python3.11
+    image: prefecthq/prefect:3-python3.12
     container_name: prefect-worker
     working_dir: /app
     volumes:
