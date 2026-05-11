@@ -19,9 +19,10 @@
 ### Data Flow
 
 ```
-Reddit API ──┐
-             ├──► Bronze (raw) ──► Silver (clean) ──► Gold (features)
-LIAR Dataset─┘         Delta Lake (local / S3)              │
+LIAR Dataset ────┐
+                 ├──► Bronze (raw) ──► Silver (clean) ──► Gold (features)
+FakeNewsNet ─────┘     Delta Lake (local / S3)               │
+(via HuggingFace)
                                                              ▼
                                                     RoBERTa Fine-tune
                                                     + MLflow Registry
@@ -38,7 +39,7 @@ LIAR Dataset─┘         Delta Lake (local / S3)              │
 ### Prerequisites
 - WSL2 (Ubuntu 22.04) on Windows, or macOS/Linux
 - Docker Desktop
-- Python 3.11+
+- Python 3.12 (exactly — 3.11 and 3.13+ are not supported)
 - (Optional) AWS account for S3 storage
 
 ### 1. Clone & configure

@@ -10,7 +10,9 @@
 
 ```bash
 # Install (in WSL2, Python 3.12)
-python -m venv .venv && source .venv/bin/activate
+# Must use python3.12 explicitly — the venv's `python` symlink can resolve to the
+# Windows system Python (3.14) on /mnt/c paths, causing ModuleNotFoundError at runtime
+python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 # Start services (MLflow + Prefect + API)
@@ -21,11 +23,10 @@ export PREFECT_API_URL=http://localhost:4200/api
 python3.12 -c "from src.orchestration.schedules import deploy; deploy()"
 
 # Start the Prefect worker (keep running in a dedicated terminal)
-# Note: use python3.12 explicitly — the venv's `python` symlink may point to a different version
 PREFECT_API_URL=http://localhost:4200/api prefect worker start --pool default-agent-pool
 
 # Test
-pytest tests/unit/ -v
+python3.12 -m pytest tests/unit/ -v
 ```
 
 ---
