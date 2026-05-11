@@ -28,8 +28,6 @@ uvicorn[standard]==0.30.1
 pydantic==2.7.1
 
 # ─── Ingestion ────────────────────────────────────────────────────────────────
-praw==7.7.1          # Reddit API
-atproto==0.0.54      # Bluesky AT Protocol client
 httpx==0.27.0
 tenacity==8.3.0
 
