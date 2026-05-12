@@ -110,3 +110,7 @@ def run() -> None:
         silver_df.write.format("delta").partitionBy("source").save(silver_path)
 
     logger.info(f"Silver table written to {silver_path}")
+
+
+if __name__ == "__main__":
+    run()

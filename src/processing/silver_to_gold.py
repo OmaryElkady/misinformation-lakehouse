@@ -146,3 +146,7 @@ def run() -> None:
         for row in gold_df.groupBy("label_binary").count().collect()
     }
     logger.info(f"Gold table written to {gold_path} | class distribution: {dist}")
+
+
+if __name__ == "__main__":
+    run()
