@@ -161,3 +161,7 @@ def run() -> None:
     logger.info(f"Total records to ingest: {len(all_records)}")
     _merge_to_bronze(all_records, path)
     logger.info("Static ingestion complete")
+
+
+if __name__ == "__main__":
+    run()
