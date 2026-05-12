@@ -54,7 +54,7 @@ def _make_record(
 
 def _load_liar() -> list[dict[str, Any]]:
     logger.info("Loading LIAR dataset from HuggingFace")
-    ds = load_dataset("liar")
+    ds = load_dataset("liar", trust_remote_code=True)
     label_names: list[str] = ds["train"].features["label"].names
     records: list[dict[str, Any]] = []
     for split_name, split in ds.items():
@@ -83,24 +83,23 @@ def _get_col(row: dict[str, Any], *candidates: str, default: str = "") -> str:
 
 
 def _load_fakenewsnet() -> list[dict[str, Any]]:
+    # rickstello/FakeNewsNet: cols = title, news_url, source_domain, tweet_num, real (0/1 int)
     logger.info("Loading FakeNewsNet dataset from HuggingFace")
-    ds = load_dataset("mrjunos/fakenewsnet")
+    ds = load_dataset("rickstello/FakeNewsNet", trust_remote_code=True)
     records: list[dict[str, Any]] = []
     for split_name, split in ds.items():
         for idx, row in enumerate(split):
-            row_id = _get_col(row, "id", "news_id", default=f"{split_name}_{idx}")
-            text = _get_col(row, "title", "text", "content", "body")
-            label = _get_col(row, "label", default="unknown")
+            label = "real" if row.get("real") == 1 else "fake"
             meta = {
-                k: v
-                for k, v in row.items()
-                if k not in ("id", "news_id", "title", "text", "content", "body", "label")
+                "news_url": row.get("news_url", ""),
+                "source_domain": row.get("source_domain", ""),
+                "tweet_num": row.get("tweet_num", 0),
+                "split": split_name,
             }
-            meta["split"] = split_name
             records.append(
                 _make_record(
-                    row_id=f"fnn_{row_id}",
-                    text=text,
+                    row_id=f"{split_name}_{idx}",
+                    text=_get_col(row, "title"),
                     label=label,
                     source="fakenewsnet",
                     meta=meta,

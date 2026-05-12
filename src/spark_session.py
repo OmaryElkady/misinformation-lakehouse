@@ -8,6 +8,7 @@ across ingestion, processing, and training jobs.
 
 from __future__ import annotations
 
+from delta import configure_spark_with_delta_pip
 from loguru import logger
 from pyspark.sql import SparkSession
 
@@ -33,6 +34,9 @@ def get_spark(app_name: str = "MisinformationLakehouse") -> SparkSession:
         .config("spark.sql.shuffle.partitions", "8")  # low for local dev
         .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     )
+
+    # Wire Delta JARs from the pip package into Spark's classpath
+    builder = configure_spark_with_delta_pip(builder)
 
     if settings.storage_mode == "s3":
         logger.info("Configuring Spark for S3 storage")
