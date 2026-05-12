@@ -20,7 +20,7 @@
 | Package | Version | Purpose |
 |---------|---------|---------|
 | pyspark | 4.1.1 | Distributed data processing |
-| delta-spark | 4.1.0 | Delta Lake on local/S3 |
+| delta-spark | 4.1.0 | Delta Lake on local/S3 — requires `configure_spark_with_delta_pip(builder)` to wire JARs from Maven |
 | pandas | 2.2.2 | Small data, ingestion helpers |
 | pyarrow | 15.0.2 | Parquet / Delta serialization |
 | transformers | 4.41.2 | RoBERTa fine-tuning + tokenizer |
@@ -36,7 +36,6 @@
 | uvicorn | 0.30.1 | ASGI server for FastAPI |
 | pydantic | 2.7.1 | Data validation |
 | pydantic-settings | 2.3.0 | Settings management from env vars |
-| praw | 7.7.1 | Reddit API client |
 | boto3 | 1.34.120 | AWS S3 access |
 | python-dotenv | 1.0.1 | .env file loading |
 | loguru | 0.7.2 | Structured logging |

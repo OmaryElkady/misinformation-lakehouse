@@ -98,21 +98,67 @@ it without needing the real mlflow to be importable at all.
 
 ## WSL Venv — Always Use `python3.12` Explicitly
 
-The `.venv/bin/python` symlink may resolve to the Windows system Python (e.g. 3.14) when
-the project is on a Windows path (`/mnt/c/...`) accessed from WSL. Packages installed with
-`pip install` under the venv go into `site-packages/python3.12/`, not 3.14, so `python` can't
-find them even though `pip list` shows them as installed.
+On this machine `/usr/bin/python3` in WSL resolves to Python 3.14.4. The venv symlink chain
+`python → python3 → /usr/bin/python3` inherits this, so `source .venv/bin/activate` silently
+activates the venv but `python` still runs 3.14 — not 3.12. Git Bash activation fails entirely
+(Linux paths, Windows fallback). Always verify with `python --version` after activating.
 
 ```bash
-# WRONG — may silently use system Python, causing ModuleNotFoundError
-python -c "from src.orchestration.schedules import deploy; deploy()"
+# WRONG — creates venv with wrong Python; python3 → 3.14.4 on this machine
+python3 -m venv .venv
 
-# CORRECT — pin the version explicitly
-python3.12 -c "from src.orchestration.schedules import deploy; deploy()"
+# CORRECT — pin explicitly
+python3.12 -m venv .venv
+source .venv/bin/activate   # in WSL only, not Git Bash
+python --version             # must show 3.12.x
 ```
 
-This also affects `prefect`, `pytest`, and any other venv CLI tool — use the versioned binary
-or activate the venv (`source .venv/bin/activate`) and verify `which python` points inside `.venv`.
+If the venv is already broken: `rm -rf .venv && python3.12 -m venv .venv && pip install -r requirements.txt`
+
+---
+
+## Delta Lake — `configure_spark_with_delta_pip` Is Required
+
+`delta-spark` installed via pip provides Python bindings only — the Scala/Java JARs are not
+bundled. Without calling `configure_spark_with_delta_pip(builder)`, Spark raises:
+
+```
+ClassNotFoundException: io.delta.sql.DeltaSparkSessionExtension
+TypeError: 'JavaPackage' object is not callable
+```
+
+`get_spark()` in `src/spark_session.py` handles this. Never bypass it by building a raw
+`SparkSession.builder` inline — the Delta extension won't load.
+
+---
+
+## HuggingFace Datasets — Always Pass `trust_remote_code=True`
+
+Both `"liar"` and `"rickstello/FakeNewsNet"` require `trust_remote_code=True`. Without it,
+`"liar"` emits a `FutureWarning` (and will hard-fail in a future `datasets` release);
+`"rickstello/FakeNewsNet"` may raise immediately. Always:
+
+```python
+load_dataset("liar", trust_remote_code=True)
+load_dataset("rickstello/FakeNewsNet", trust_remote_code=True)
+```
+
+The old `mrjunos/fakenewsnet` dataset no longer exists on HuggingFace Hub — it will raise
+`DatasetNotFoundError`. Use `rickstello/FakeNewsNet` instead.
+
+---
+
+## Runnable Modules — Every `run()` Needs a `__main__` Block
+
+Any module with a `run()` entry point that should be invocable with `python -m src.foo.bar`
+must end with:
+
+```python
+if __name__ == "__main__":
+    run()
+```
+
+Without it `python -m` imports the module and exits silently — no error, no output, nothing runs.
 
 ---
 
