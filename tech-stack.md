@@ -23,13 +23,13 @@
 | delta-spark | 4.1.0 | Delta Lake on local/S3 — requires `configure_spark_with_delta_pip(builder)` to wire JARs from Maven |
 | pandas | 2.2.2 | Small data, ingestion helpers |
 | pyarrow | 15.0.2 | Parquet / Delta serialization |
-| transformers | 4.41.2 | RoBERTa fine-tuning + tokenizer |
-| torch | 2.3.0 | Model training backend |
-| accelerate | 0.30.0 | Multi-GPU / mixed-precision support for HuggingFace Trainer |
-| datasets | 2.19.2 | HuggingFace dataset loading |
-| scikit-learn | 1.5.0 | Metrics (f1, precision, recall, confusion matrix) — training + tests |
+| transformers | >=4.44.0 | RoBERTa fine-tuning + tokenizer (4.44+ required for numpy 2.x compat; 4.46+ renamed `evaluation_strategy` → `eval_strategy`) |
+| torch | Colab pre-installed | Model training backend — do NOT pin in Colab notebook; Colab provides a CUDA-compatible build |
+| accelerate | >=0.34.0 | Multi-GPU / mixed-precision support for HuggingFace Trainer (0.34+ required for numpy 2.x compat) |
+| datasets | >=2.21.0 | HuggingFace dataset loading (2.21+ required for numpy 2.x compat; older versions carry hard `numpy<2` constraint) |
+| scikit-learn | >=1.6.0 | Metrics (f1, precision, recall, confusion matrix) — training + tests |
 | matplotlib | 3.9.0 | Confusion matrix PNG artifact logged to MLflow |
-| mlflow | 2.13.0 | Experiment tracking + model registry |
+| mlflow | >=2.15.0 | Experiment tracking + model registry — client and Docker server must both be >=2.15.0; 2.15 added host header validation, CSRF protection, and the logged-models endpoint |
 | groq | 0.9.0 | Llama 3 inference (free tier) |
 | prefect | >=3.0,<4.0 | Pipeline orchestration (3.x required for Python 3.12) |
 | fastapi | 0.111.0 | Inference API server |
@@ -40,10 +40,15 @@
 | python-dotenv | 1.0.1 | .env file loading |
 | loguru | 0.7.2 | Structured logging |
 
-> **setuptools compatibility:** `mlflow==2.13.0` calls `import pkg_resources` at import time.
-> `setuptools >= 80` removed `pkg_resources` as a standalone module, which breaks the mlflow
-> import and prevents pytest from collecting serving tests. Pin `setuptools<80` in the venv, or
-> keep mlflow imports lazy (inside functions) in `src/serving/` — which is what the codebase does.
+> **setuptools compatibility:** MLflow calls `import pkg_resources` at import time (via CLI and some internals).
+> `setuptools >= 80` removed `pkg_resources` as a standalone module, which breaks `mlflow server`
+> and prevents pytest from collecting serving tests. `setuptools<80` is pinned in `requirements.txt`.
+> MLflow imports in `src/serving/` are kept lazy (inside functions) as an additional guard.
+
+> **Colab-specific versions:** The notebook (`notebooks/colab_training.ipynb`) uses minimum-version
+> bounds (`>=`) rather than exact pins for ML packages. This is intentional — Colab's pre-installed
+> CUDA torch must not be overridden, and packages must be post-numpy-2.0 releases. Do not backport
+> the notebook's package list to `requirements.txt` or vice versa.
 
 > **Prefect + Python 3.12:** Prefect 2.x (including 2.19.5) does not run on Python 3.12 because
 > `pydantic.v1` (bundled in pydantic 2.x) calls `ForwardRef._evaluate()` with a positional

@@ -80,8 +80,13 @@ NGROK_AUTHTOKEN=your_ngrok_token_here
 **Start the tunnel** (keep this terminal open while Colab is running):
 
 ```bash
-ngrok http 5000
+ngrok http 5000 --host-header="localhost:5000"
 ```
+
+The `--host-header` flag is required — MLflow 2.15+ rejects requests whose Host header
+doesn't match `localhost`. ngrok by default forwards the public hostname
+(`abc123.ngrok-free.dev`) as the Host header, which MLflow blocks as a DNS-rebinding
+attack. This flag rewrites it to `localhost:5000` before forwarding.
 
 You will see output like:
 ```
@@ -98,10 +103,17 @@ Copy the `https://...ngrok-free.app` URL — you will paste it into Cell 2 of th
 2. Click **File → Upload notebook** and upload `notebooks/colab_training.ipynb`
 3. Set runtime to GPU: **Runtime → Change runtime type → T4 GPU → Save**
 4. In **Cell 2**, replace `YOUR_NGROK_URI_HERE` with your ngrok HTTPS URL
-5. Run all cells: **Runtime → Run all**
+5. **Run Cell 1 only first**, then do **Runtime → Restart session** (Ctrl+M .)
+   - This is required — the old numpy binary stays loaded in memory until restart.
+     Skipping the restart causes `ValueError: numpy.dtype size changed` even after a correct install.
+   - After restarting, do NOT re-run Cell 1. Run Cell 2 onward.
+6. Run the remaining cells in order
 
 Training takes roughly 15–30 minutes on a T4 GPU for the full dataset.
-Watch the MLflow UI at `http://localhost:5000` to see metrics appear in real time.
+
+**Viewing MLflow during training:** open `http://localhost:5000` in your local browser
+(not the ngrok URL — MLflow 2.15+ CSRF protection blocks the UI when accessed via ngrok).
+Look for the **misinformation-detection** experiment in the left panel.
 
 ---
 

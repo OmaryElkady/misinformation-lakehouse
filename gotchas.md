@@ -8,6 +8,12 @@
 
 ## Never Do This
 
+- Do NOT pin `torch` in the Colab notebook Cell 1 — Colab pre-installs a CUDA-compatible version (`torch==2.10.0+cu128` for CUDA 12.8); pinning `torch==2.3.0` downgrades to a CUDA 11.8 build and silently breaks GPU training
+- Do NOT use `evaluation_strategy=` in `TrainingArguments` with transformers ≥4.46 — it was renamed to `eval_strategy=`; you get `TypeError: unexpected keyword argument 'evaluation_strategy'`
+- Do NOT use pinned pre-numpy-2.0 package versions in the Colab notebook (`datasets==2.19.2`, `mlflow==2.13.0`, `transformers==4.41.2`, `accelerate==0.30.0`) — these carry a hard `numpy<2` constraint that downgrades Colab's numpy and causes `ValueError: numpy.dtype size changed, may indicate binary incompatibility` at import time
+- Do NOT view the MLflow UI through the ngrok URL in a browser — MLflow 2.15+ CSRF protection blocks POST requests from the ngrok origin and breaks the React UI (403 on `/ajax-api/`). Use `http://localhost:5000` directly; ngrok is for Colab's programmatic access only
+- Do NOT run `mlflow server` locally if `docker compose up -d` is already running — MLflow is already on port 5000 via Docker; starting a second instance fails with `Connection in use`
+
 - Do NOT use `os.getenv()` directly — always import `settings` from `src/config.py`
 - Do NOT use `@app.on_event("startup")` in FastAPI — use the `lifespan` context manager; `on_event` is deprecated in FastAPI 0.111 and removed in later versions
 - Do NOT import `mlflow` at the top of any file in `src/serving/` — import it lazily inside the function that needs it; `setuptools >= 80` removes `pkg_resources` and breaks the mlflow module-level import, which prevents test collection
@@ -27,6 +33,17 @@
 - All integration tests go in `tests/integration/` with `@pytest.mark.integration` AND `@pytest.mark.skip`
 - Every new env var must be added to `.env.example` AND as a field in the `Settings` class in `src/config.py`
 - Use `loguru` for all logging — never `print()` or `logging.basicConfig()`
+
+---
+
+## MLflow 2.15+ Breaking Changes
+
+- **Host header validation** — rejects requests where `Host` ≠ `localhost`. Fix for ngrok: `ngrok http 5000 --host-header="localhost:5000"`
+- **CSRF protection** — POST requests to `/ajax-api/` endpoints from non-local origins return 403. Browser UI must be accessed at `http://localhost:5000`, not via ngrok
+- **`--extra-allowed-hosts '*'`** — must be added to the `mlflow server` command in `docker-compose.yml` or the host-header allow-list rejects local Docker bridge traffic
+- **Client/server must match** — 2.15+ client calls `/api/2.0/mlflow/logged-models` (404 on 2.13.0 server); keep both on `>=2.15.0`
+- **`artifact_path` deprecated** — use `name=` in `mlflow.transformers.log_model`; `artifact_path=` still works but logs a warning
+- **`transition_model_version_stage` deprecated since 2.9** — works now but will be removed; stages API will be replaced by aliases
 
 ---
 
