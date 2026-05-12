@@ -27,12 +27,13 @@ services:
     environment:
       MLFLOW_HOST: "0.0.0.0"
     command: >
-      bash -c "pip install mlflow==2.13.0 --quiet &&
+      bash -c "pip install 'mlflow>=2.15.0' --quiet &&
                python -m mlflow server
                --host 0.0.0.0
                --port 5000
                --backend-store-uri sqlite:///mlflow/mlflow.db
-               --default-artifact-root /mlflow/mlruns"
+               --default-artifact-root /mlflow/mlruns
+               --extra-allowed-hosts '*'"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 15s
