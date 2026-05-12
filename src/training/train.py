@@ -279,3 +279,10 @@ def register_model(run_id: str) -> None:
             f"Model '{settings.model_name}' v{version} → Staging "
             f"(eval_f1={eval_f1:.4f} < 0.80 threshold)"
         )
+
+
+if __name__ == "__main__":
+    # Phase 1 (local): export Gold Delta → parquet files for Colab training
+    # Phase 2 runs on Colab: call train() after pointing MLFLOW_TRACKING_URI at ngrok
+    # Phase 3 (local): call register_model(run_id) after Colab finishes
+    export_gold_to_parquet()
