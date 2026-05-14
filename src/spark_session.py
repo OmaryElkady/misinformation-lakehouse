@@ -37,9 +37,10 @@ def get_spark(app_name: str = "MisinformationLakehouse") -> SparkSession:
 
     # Wire Delta JARs (and S3 JARs when needed) from Maven into Spark's classpath
     if settings.storage_mode == "s3":
+        # hadoop-aws must match the Hadoop version bundled in PySpark 4.1.x (3.4.2)
         s3_packages = [
-            "org.apache.hadoop:hadoop-aws:3.3.4",
-            "com.amazonaws:aws-java-sdk-bundle:1.12.262",
+            "org.apache.hadoop:hadoop-aws:3.4.2",
+            "com.amazonaws:aws-java-sdk-bundle:1.12.367",
         ]
         builder = configure_spark_with_delta_pip(builder, extra_packages=s3_packages)
         logger.info("Configuring Spark for S3 storage")
