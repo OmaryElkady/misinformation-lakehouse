@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, HTTPException
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.config import settings
 from src.serving.model_loader import ModelLoader
@@ -60,6 +60,8 @@ class PredictRequest(BaseModel):
 
 
 class PredictResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     text: str
     label: str
     confidence: float
@@ -79,6 +81,8 @@ class BatchPredictResponse(BaseModel):
 
 
 class ModelInfoResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     model_name: str
     model_version: str
     stage: str
