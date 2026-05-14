@@ -103,35 +103,29 @@ class TestRegisterModel:
     def test_promotes_to_production_when_f1_above_threshold(self):
         client = self._make_mock_client(eval_f1=0.85)
         self._run(client, version="2")
-        client.transition_model_version_stage.assert_called_once_with(
-            name="misinformation-roberta-v1",
-            version="2",
-            stage="Production",
+        client.set_registered_model_alias.assert_called_once_with(
+            "misinformation-roberta-v1", "production", "2"
         )
 
     def test_does_not_promote_to_production_when_f1_below_threshold(self):
         client = self._make_mock_client(eval_f1=0.75)
         self._run(client)
-        calls = [str(c) for c in client.transition_model_version_stage.call_args_list]
-        assert not any("Production" in c for c in calls)
+        calls = [str(c) for c in client.set_registered_model_alias.call_args_list]
+        assert not any("production" in c for c in calls)
 
     def test_sends_to_staging_when_f1_below_threshold(self):
         client = self._make_mock_client(eval_f1=0.75)
         self._run(client, version="1")
-        client.transition_model_version_stage.assert_called_once_with(
-            name="misinformation-roberta-v1",
-            version="1",
-            stage="Staging",
+        client.set_registered_model_alias.assert_called_once_with(
+            "misinformation-roberta-v1", "staging", "1"
         )
 
     def test_promotes_at_exact_threshold(self):
         # eval_f1 == 0.80 should still promote to Production
         client = self._make_mock_client(eval_f1=0.80)
         self._run(client, version="4")
-        client.transition_model_version_stage.assert_called_once_with(
-            name="misinformation-roberta-v1",
-            version="4",
-            stage="Production",
+        client.set_registered_model_alias.assert_called_once_with(
+            "misinformation-roberta-v1", "production", "4"
         )
 
     def test_registers_model_with_correct_uri(self):

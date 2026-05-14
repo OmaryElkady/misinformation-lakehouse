@@ -243,7 +243,7 @@ def _log_confusion_matrix(trainer, val_ds) -> None:
 def register_model(run_id: str) -> None:
     """Register the model from run_id in MLflow Model Registry.
 
-    Promotes to 'Production' if eval_f1 >= 0.80, otherwise 'Staging'.
+    Sets alias 'production' if eval_f1 >= 0.80, otherwise 'staging'.
     """
     import mlflow
     from mlflow import MlflowClient
@@ -261,22 +261,14 @@ def register_model(run_id: str) -> None:
     eval_f1 = run.data.metrics.get("eval_f1", 0.0)
 
     if eval_f1 >= 0.80:
-        client.transition_model_version_stage(
-            name=settings.model_name,
-            version=version,
-            stage="Production",
-        )
+        client.set_registered_model_alias(settings.model_name, "production", version)
         logger.info(
-            f"Model '{settings.model_name}' v{version} → Production (eval_f1={eval_f1:.4f})"
+            f"Model '{settings.model_name}' v{version} → alias 'production' (eval_f1={eval_f1:.4f})"
         )
     else:
-        client.transition_model_version_stage(
-            name=settings.model_name,
-            version=version,
-            stage="Staging",
-        )
+        client.set_registered_model_alias(settings.model_name, "staging", version)
         logger.info(
-            f"Model '{settings.model_name}' v{version} → Staging "
+            f"Model '{settings.model_name}' v{version} → alias 'staging' "
             f"(eval_f1={eval_f1:.4f} < 0.80 threshold)"
         )
 
