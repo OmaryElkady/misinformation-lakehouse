@@ -12,6 +12,9 @@ lint.ignore = ["E501"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "--cov=src --cov-report=term-missing --cov-fail-under=70"
+filterwarnings = [
+    "ignore:Field .model_name. has conflict with protected namespace:UserWarning",
+]
 markers = [
     "unit: fast unit tests, no external deps",
     "integration: requires Spark or network",
