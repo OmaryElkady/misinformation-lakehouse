@@ -43,7 +43,27 @@
 - **`--extra-allowed-hosts '*'`** — must be added to the `mlflow server` command in `docker-compose.yml` or the host-header allow-list rejects local Docker bridge traffic
 - **Client/server must match** — 2.15+ client calls `/api/2.0/mlflow/logged-models` (404 on 2.13.0 server); keep both on `>=2.15.0`
 - **`artifact_path` deprecated** — use `name=` in `mlflow.transformers.log_model`; `artifact_path=` still works but logs a warning
-- **`transition_model_version_stage` deprecated since 2.9** — works now but will be removed; stages API will be replaced by aliases
+- **`transition_model_version_stage` removed from this codebase** — replaced by `client.set_registered_model_alias(name, "production"/"staging", version)`. Load by alias with `models:/name@production` URI. `model_loader.py` still falls back to the legacy stages API for any model promoted before the migration.
+
+---
+
+## Pydantic `protected_namespaces` — Required on All `BaseModel` Response Classes
+
+Pydantic v2 warns on fields starting with `model_` (e.g. `model_name`, `model_version`).
+`BaseSettings` in `config.py` is already suppressed via `SettingsConfigDict(protected_namespaces=())`.
+Plain `BaseModel` subclasses need it added manually:
+
+```python
+from pydantic import BaseModel, ConfigDict
+
+class MyResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    model_name: str
+    model_version: str
+```
+
+Without it you get: `UserWarning: Field "model_name" has conflict with protected namespace "model_"`.
 
 ---
 
@@ -113,24 +133,23 @@ it without needing the real mlflow to be importable at all.
 
 ---
 
-## WSL Venv — Always Use `python3.12` Explicitly
+## WSL Venv — Create with `python3.12`, Run with `python`
 
-On this machine `/usr/bin/python3` in WSL resolves to Python 3.14.4. The venv symlink chain
-`python → python3 → /usr/bin/python3` inherits this, so `source .venv/bin/activate` silently
-activates the venv but `python` still runs 3.14 — not 3.12. Git Bash activation fails entirely
-(Linux paths, Windows fallback). Always verify with `python --version` after activating.
+Always create the venv with `python3.12` to pin the interpreter. Once activated, plain `python`
+resolves correctly to 3.12 inside the venv. Git Bash activation silently falls back to Windows
+Python — always run pipeline code in WSL.
 
 ```bash
-# WRONG — creates venv with wrong Python; python3 → 3.14.4 on this machine
-python3 -m venv .venv
-
-# CORRECT — pin explicitly
+# CORRECT — pin explicitly at creation time
 python3.12 -m venv .venv
-source .venv/bin/activate   # in WSL only, not Git Bash
+source .venv/bin/activate   # WSL only, not Git Bash
 python --version             # must show 3.12.x
+
+# After activation, plain python/pytest work fine — no need to prefix python3.12
+pytest tests/unit/ -v
 ```
 
-If the venv is already broken: `rm -rf .venv && python3.12 -m venv .venv && pip install -r requirements.txt`
+If the venv is broken: `rm -rf .venv && python3.12 -m venv .venv && pip install -r requirements.txt`
 
 ---
 

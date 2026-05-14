@@ -10,8 +10,7 @@
 
 ```bash
 # Install (in WSL2, Python 3.12)
-# Must use python3.12 explicitly — the venv's `python` symlink can resolve to the
-# Windows system Python (3.14) on /mnt/c paths, causing ModuleNotFoundError at runtime
+# Always use python3.12 to CREATE the venv — once activated, plain `python` resolves to 3.12
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
@@ -20,13 +19,13 @@ docker compose up -d
 
 # Register Prefect deployments (one-time, after services are healthy)
 export PREFECT_API_URL=http://localhost:4200/api
-python3.12 -c "from src.orchestration.schedules import deploy; deploy()"
+python -c "from src.orchestration.schedules import deploy; deploy()"
 
 # Start the Prefect worker (keep running in a dedicated terminal)
 PREFECT_API_URL=http://localhost:4200/api prefect worker start --pool default-agent-pool
 
 # Test
-python3.12 -m pytest tests/unit/ -v
+pytest tests/unit/ -v
 ```
 
 ---
@@ -84,7 +83,7 @@ tests/
 - mlflow is imported lazily inside `ModelLoader.load()` (not at module level) — this avoids import failures in envs where `setuptools >= 80` has removed `pkg_resources`
 - `groq` and `datasets` are also optional at import time — both are wrapped in `try/except ImportError` at module level so CI's minimal install doesn't crash; the fallback `= None` keeps the name patchable in tests
 - The serving Dockerfile must include `pydantic-settings` — `src/config.py` imports it at module level and the container won't start without it
-- **WSL venv must use `python3.12` explicitly** — `/usr/bin/python3` on this machine resolves to Python 3.14.4; the venv `python` symlink inherits this and silently uses the wrong interpreter. Always create with `python3.12 -m venv .venv`. If broken, `rm -rf .venv` and recreate. Git Bash venv activation also silently falls back to Windows Python — always run pipeline code in WSL.
+- **WSL venv: create with `python3.12`, run with `python`** — Always create the venv with `python3.12 -m venv .venv` to pin the interpreter explicitly. Once activated, plain `python` resolves to 3.12 within the venv. Git Bash venv activation silently falls back to Windows Python — always run pipeline code in WSL, not Git Bash.
 - **Delta Lake JARs need `configure_spark_with_delta_pip`** — `delta-spark` pip installs Python bindings only; Scala JARs must be fetched from Maven at startup. `get_spark()` in `spark_session.py` calls `configure_spark_with_delta_pip(builder)` before `getOrCreate()`. Without it, Spark raises `ClassNotFoundException: io.delta.sql.DeltaSparkSessionExtension` and all Delta ops fail with `TypeError: 'JavaPackage' object is not callable`. JARs are cached in `~/.ivy2.5.2/jars` after first run.
 - **FakeNewsNet dataset is `rickstello/FakeNewsNet`** — `mrjunos/fakenewsnet` no longer exists on HuggingFace Hub. Schema: `title` (text), `news_url`, `source_domain`, `tweet_num`, `real` (int: 0=fake, 1=real), single `train` split, 23,196 records.
 - **HuggingFace `trust_remote_code=True`** — required for both `load_dataset("liar", ...)` and `load_dataset("rickstello/FakeNewsNet", ...)`; will be mandatory in the next major `datasets` release.
@@ -98,7 +97,8 @@ tests/
 - **MLflow 2.15+ host header validation** — MLflow 2.15+ rejects requests whose `Host` header doesn't match `localhost` (DNS-rebinding protection). When routing Colab through ngrok, always start ngrok with `ngrok http 5000 --host-header="localhost:5000"` so the header is rewritten before hitting MLflow. Without this flag, every Colab API call returns 403
 - **MLflow 2.15+ CSRF** — the `/ajax-api/` endpoints (used by the MLflow React UI) return 403 for POST requests from non-local origins including the ngrok URL. Always view the MLflow UI at `http://localhost:5000` directly in a browser; ngrok is for Colab's programmatic API access only. Use an incognito window if you previously visited the ngrok URL to avoid stale origin context
 - **MLflow 2.15+ docker-compose** — the server command must include `--extra-allowed-hosts '*'` to pass the host-header allow-list for all local origins
-- **`transition_model_version_stage` deprecated since MLflow 2.9** — used in `register_model()` in `src/training/train.py`; model registry stages will be removed in a future major MLflow release. Works now but will eventually need migrating to the aliases API
+- **MLflow model registration uses aliases, not stages** — `register_model()` in `src/training/train.py` calls `client.set_registered_model_alias(name, "production"/"staging", version)` instead of the deprecated `transition_model_version_stage`. `model_loader.py` still uses the legacy `get_latest_versions(stages=[...])` API for backward compatibility with the currently deployed model (which was promoted via the old API). Future-proof fix: also call `client.set_registered_model_alias` when manually promoting a model, then update `model_loader.py` to use `client.get_model_version_by_alias(name, alias)` and `models:/name@production` URIs.
+- **Pydantic `protected_namespaces=()` needed on all `BaseModel` subclasses with `model_*` fields** — `BaseSettings` in `config.py` already handles this via `SettingsConfigDict(protected_namespaces=())`. For plain `BaseModel` response classes (e.g. `PredictResponse`, `ModelInfoResponse` in `src/serving/app.py`), add `model_config = ConfigDict(protected_namespaces=())` as a class attribute.
 - **Colab notebook: do not pin torch** — Colab pre-installs a CUDA-compatible torch (e.g. `torch==2.10.0+cu128` for CUDA 12.8). Pinning `torch==2.3.0` downgrades it to a build for CUDA 11.8/12.1, breaking GPU training silently. Remove torch from Cell 1's pip install entirely
 - **Colab notebook: use post-numpy-2.0 package versions** — packages released before numpy 2.0 (June 2024) carry a hard `numpy<2` constraint. Colab's pre-installed pandas and other packages are compiled against numpy 2.x; if numpy is downgraded to 1.26.4 you get `ValueError: numpy.dtype size changed, may indicate binary incompatibility`. Use `transformers>=4.44.0`, `datasets>=2.21.0`, `mlflow>=2.15.0`, `accelerate>=0.34.0`, `scikit-learn>=1.6.0` in the notebook
 - **Colab notebook: restart runtime after Cell 1** — after the pip install cell runs, you must do Runtime → Restart session before running Cell 2 onward. The old numpy binary stays loaded in memory until restart; skipping this causes the dtype size mismatch error even after a correct install
