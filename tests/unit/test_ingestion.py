@@ -99,7 +99,7 @@ class TestRunRaisesOnHFFailure:
             mock_load.side_effect = RuntimeError("HuggingFace connection failed")
             with pytest.raises(RuntimeError, match="HuggingFace connection failed"):
                 run()
-        mock_load.assert_called_once_with("liar")
+        mock_load.assert_called_once_with("liar", trust_remote_code=True)
 
     def test_run_raises_when_fakenewsnet_dataset_fails_to_load(self):
         import unittest.mock as mock
@@ -208,8 +208,8 @@ class TestRunLoadsDatasets:
             run()
 
         assert mock_load.call_count == 2
-        mock_load.assert_any_call("liar")
-        mock_load.assert_any_call("mrjunos/fakenewsnet")
+        mock_load.assert_any_call("liar", trust_remote_code=True)
+        mock_load.assert_any_call("rickstello/FakeNewsNet", trust_remote_code=True)
 
     def test_run_calls_merge_with_combined_records(self):
         from src.ingestion.ingest_static import run
