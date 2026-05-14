@@ -2,7 +2,7 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, production]
   pull_request:
     branches: [main]
 
@@ -119,9 +119,43 @@ jobs:
 
           docker stop misinfo-api-test
 
-  # ── 4. Model Validation Gate (runs on main only) ────────────────────────────
-  # Checks that a registered MLflow model meets minimum quality thresholds
-  # before any merge to main. Skipped if no model is registered yet.
+  # ── 4. S3 Connectivity Check (runs on production branch only) ──────────────
+  s3-connectivity:
+    name: S3 Connectivity Check
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.ref == 'refs/heads/production'
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+      STORAGE_MODE: s3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install \
+            boto3==1.34.120 \
+            rich==13.7.1 \
+            pydantic-settings==2.3.0 \
+            python-dotenv==1.0.1 \
+            loguru==0.7.2
+
+      - name: Verify S3 connectivity
+        run: python scripts/verify_s3.py
+
+  # ── 5. Model Validation Gate (runs on main only) ────────────────────────────
+  # Checks that a registered MLflow model meets quality thresholds before any
+  # merge to main. Skipped if no model is registered yet.
   model-validation:
     name: Model Validation Gate
     runs-on: ubuntu-latest

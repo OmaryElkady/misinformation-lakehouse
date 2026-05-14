@@ -15,6 +15,7 @@ env/
 # Environment secrets — NEVER commit
 .env
 *.env.local
+.env.production
 
 # Delta Lake / data (large binary files)
 data/
