@@ -455,7 +455,7 @@ Best run metrics on the held-out validation set:
 | Precision (weighted) | 0.773 |
 | Recall (weighted) | 0.781 |
 
-The model currently carries the `staging` alias in the MLflow registry (F1 = 0.774 < 0.80 threshold for `production`). See [Results & Limitations](#results--limitations) for context.
+The model has been manually promoted to the `production` alias in the MLflow registry. F1 = 0.774 is below the automated promotion threshold (0.80); see [Results & Limitations](#results--limitations) for context.
 
 ### MLflow Experiment Tracking
 
@@ -563,7 +563,7 @@ curl http://localhost:8000/model/info
 {
   "model_name": "misinformation-roberta-v1",
   "model_version": "2",
-  "stage": "Staging",
+  "stage": "Production",
   "mlflow_run_id": "a3f9b12c...",
   "eval_f1": 0.774,
   "loaded": true
