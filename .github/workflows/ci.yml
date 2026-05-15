@@ -151,7 +151,7 @@ jobs:
             loguru==0.7.2
 
       - name: Verify S3 connectivity
-        run: python scripts/verify_s3.py
+        run: PYTHONPATH=. python scripts/verify_s3.py
 
   # ── 5. Model Validation Gate (runs on main only) ────────────────────────────
   # Checks that a registered MLflow model meets quality thresholds before any
