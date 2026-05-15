@@ -8,7 +8,7 @@
 [![Prefect](https://img.shields.io/badge/Prefect-3.x-024DFD?logo=prefect&logoColor=white)](https://www.prefect.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![AWS S3](https://img.shields.io/badge/AWS-S3-FF9900?logo=amazons3&logoColor=white)](https://aws.amazon.com/s3/)
-[![CI](https://github.com/oelkady/misinformation-lakehouse/actions/workflows/ci.yml/badge.svg)](https://github.com/oelkady/misinformation-lakehouse/actions/workflows/ci.yml)
+[![CI](https://github.com/OmaryElkady/misinformation-lakehouse/actions/workflows/ci.yml/badge.svg)](https://github.com/OmaryElkady/misinformation-lakehouse/actions/workflows/ci.yml)
 
 End-to-end MLOps platform that ingests public misinformation datasets, processes them through a Bronze→Silver→Gold Delta Lake medallion pipeline, fine-tunes RoBERTa for binary classification, and serves real-time predictions via FastAPI with optional LLM-generated explanations.
 
@@ -196,7 +196,7 @@ Delta Lake was chosen over plain Parquet for three concrete reasons. First, merg
 ### Clone & Configure
 
 ```bash
-git clone https://github.com/oelkady/misinformation-lakehouse
+git clone https://github.com/OmaryElkady/misinformation-lakehouse
 cd misinformation-lakehouse
 
 # Copy the environment template
