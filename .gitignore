@@ -51,3 +51,6 @@ Thumbs.db
 # Claude Code — local tooling, not project source
 .claude/
 CLAUDE.md
+architecture.md
+gotchas.md
+tech-stack.md
