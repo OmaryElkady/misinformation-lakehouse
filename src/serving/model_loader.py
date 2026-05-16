@@ -24,24 +24,26 @@ class ModelLoader:
             mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
             client = MlflowClient()
 
-            for stage in ("Production", "Staging"):
-                versions = client.get_latest_versions(settings.model_name, stages=[stage])
-                if versions:
-                    version = versions[0]
-                    model_uri = f"models:/{settings.model_name}/{stage}"
-                    pipeline = mlflow.transformers.load_model(model_uri)
-                    self.model = pipeline
-                    self.model_version = str(version.version)
-                    self.run_id = version.run_id
-                    self.stage = stage
-                    self.loaded = True
-                    logger.info(
-                        f"Loaded {settings.model_name} v{version.version} ({stage}) from MLflow"
-                    )
-                    return
+            for alias in ("production", "staging"):
+                try:
+                    version = client.get_model_version_by_alias(settings.model_name, alias)
+                except Exception:
+                    continue
+
+                model_uri = f"models:/{settings.model_name}@{alias}"
+                pipeline = mlflow.transformers.load_model(model_uri)
+                self.model = pipeline
+                self.model_version = str(version.version)
+                self.run_id = version.run_id
+                self.stage = alias
+                self.loaded = True
+                logger.info(
+                    f"Loaded {settings.model_name} v{version.version} ({alias}) from MLflow"
+                )
+                return
 
             logger.warning(
-                f"No Production or Staging model found for '{settings.model_name}' "
+                f"No 'production' or 'staging' alias found for '{settings.model_name}' "
                 "— API starting without a model. /predict will return 503."
             )
         except Exception as exc:

@@ -37,7 +37,15 @@ groq_client = (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    model_loader.load()
+    import asyncio
+
+    for attempt in range(1, 4):
+        model_loader.load()
+        if model_loader.loaded:
+            break
+        if attempt < 3:
+            logger.warning(f"Model load attempt {attempt}/3 failed — retrying in 10s")
+            await asyncio.sleep(10)
     yield
 
 
@@ -119,6 +127,16 @@ def _get_explanation(label: str, confidence: float, text: str) -> str | None:
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok", "model_loaded": model_loader.loaded}
+
+
+@app.post("/reload")
+async def reload_model() -> dict:
+    model_loader.load()
+    return {
+        "loaded": model_loader.loaded,
+        "model_version": model_loader.model_version,
+        "stage": model_loader.stage,
+    }
 
 
 @app.get("/model/info", response_model=ModelInfoResponse)
