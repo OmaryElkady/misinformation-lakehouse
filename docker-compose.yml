@@ -8,6 +8,7 @@ networks:
 # ─── Named volumes ────────────────────────────────────────────────────────────
 volumes:
   mlflow-data:
+  mlflow-db-data:
   delta-data:
   prefect-data:
 
@@ -18,22 +19,26 @@ services:
     image: python:3.11-slim
     container_name: mlflow-server
     working_dir: /mlflow
+    restart: unless-stopped
     volumes:
       - mlflow-data:/mlflow/mlruns
+      - mlflow-db-data:/mlflow/db
     ports:
       - "5000:5000"
     networks:
       - lakehouse-net
     environment:
       MLFLOW_HOST: "0.0.0.0"
+      MLFLOW_GUNICORN_OPTS: "--timeout 120"
+      GUNICORN_CMD_ARGS: "--timeout 120"
     command: >
-      bash -c "pip install 'mlflow>=2.15.0' --quiet &&
+      bash -c "pip install 'mlflow>=2.15.0,<3.0.0' --quiet &&
                python -m mlflow server
                --host 0.0.0.0
                --port 5000
-               --backend-store-uri sqlite:///mlflow/mlflow.db
+               --backend-store-uri sqlite:////mlflow/db/mlflow.db
                --default-artifact-root /mlflow/mlruns
-               --extra-allowed-hosts '*'"
+               --extra-allowed-hosts mlflow:5000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 15s
@@ -52,7 +57,7 @@ services:
       - lakehouse-net
     command: prefect server start --host 0.0.0.0
     environment:
-      PREFECT_API_DATABASE_CONNECTION_URL: "sqlite+aiosqlite:////root/.prefect/prefect.db"
+      PREFECT_API_DATABASE_CONNECTION_URL: "sqlite+aiosqlite:////root/.prefect/prefect.db?timeout=30"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:4200/api/health')"]
       interval: 15s
