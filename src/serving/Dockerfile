@@ -8,6 +8,11 @@ RUN apt-get update && apt-get install -y \
 # ─── App setup ────────────────────────────────────────────────────────────────
 WORKDIR /app
 
+# Install CPU-only PyTorch first (avoids 3 GB CUDA download in a serving container).
+# transformers>=5.0.0 requires torch>=2.4.0; the CPU wheel from download.pytorch.org
+# satisfies that without pulling a CUDA build from PyPI.
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
 # Install only serving-layer deps (keeps image lean)
 COPY requirements.txt .
 RUN pip install --no-cache-dir \
@@ -15,9 +20,8 @@ RUN pip install --no-cache-dir \
     uvicorn[standard]==0.30.1 \
     pydantic==2.7.1 \
     pydantic-settings==2.3.0 \
-    'mlflow>=2.15.0' \
-    transformers==4.41.2 \
-    torch==2.3.0 \
+    'mlflow>=3.0.0,<4.0.0' \
+    'transformers>=5.0.0,<6.0.0' \
     'groq>=0.13.0' \
     python-dotenv==1.0.1 \
     loguru==0.7.2
