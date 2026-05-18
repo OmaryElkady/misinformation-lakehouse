@@ -107,13 +107,41 @@ Copy the `https://...ngrok-free.app` URL — you will paste it into Cell 2 of th
    - This is required — the old numpy binary stays loaded in memory until restart.
      Skipping the restart causes `ValueError: numpy.dtype size changed` even after a correct install.
    - After restarting, do NOT re-run Cell 1. Run Cell 2 onward.
-6. Run the remaining cells in order
+6. **In Cell 2, set a long MLflow timeout before importing mlflow:**
+
+   ```python
+   import os
+   os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] = "600"  # must come before `import mlflow`
+   ```
+
+   MLflow's default request timeout is 120 s. The model artifact upload (`log_model`) sends
+   500 MB+ over the ngrok tunnel; without this, the upload stalls past the timeout and MLflow
+   silently records only the metadata (params, metrics, tags) while leaving the `artifacts/`
+   directory empty. The model appears in the registry but fails to load later with
+   `RESOURCE_DOES_NOT_EXIST: No such artifact: MLmodel`.
+
+7. Run the remaining cells in order
 
 Training takes roughly 15–30 minutes on a T4 GPU for the full dataset.
 
 **Viewing MLflow during training:** open `http://localhost:5000` in your local browser
 (not the ngrok URL — MLflow 2.15+ CSRF protection blocks the UI when accessed via ngrok).
 Look for the **misinformation-detection** experiment in the left panel.
+
+---
+
+## Step 4b — Verify Artifacts Were Uploaded
+
+Before moving on, confirm the artifact upload actually completed. In the MLflow UI
+(`http://localhost:5000` → experiment → click the run):
+
+- Click the **Artifacts** tab on the run page
+- You should see model files: `MLmodel`, `config.json`, `tokenizer_config.json`,
+  `pytorch_model.bin` (or `model.safetensors`), etc.
+- If the **Artifacts** tab is blank or missing these files, the upload failed silently.
+  Re-run training with `MLFLOW_HTTP_REQUEST_TIMEOUT=600` set before any mlflow import
+  and watch the upload progress bar in the Colab cell output — if it stalls at 0%, the
+  ngrok tunnel may have dropped; restart ngrok and retry.
 
 ---
 
