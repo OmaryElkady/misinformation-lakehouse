@@ -8,6 +8,7 @@ networks:
 # ─── Named volumes ────────────────────────────────────────────────────────────
 volumes:
   mlflow-data:
+  mlflow-artifacts-data:   # MLflow 3.x proxy endpoint stores artifacts here (./mlartifacts), separate from mlruns
   mlflow-db-data:
   delta-data:
   prefect-data:
@@ -22,6 +23,7 @@ services:
     restart: unless-stopped
     volumes:
       - mlflow-data:/mlflow/mlruns
+      - mlflow-artifacts-data:/mlflow/mlartifacts   # persist proxy-endpoint artifacts across container recreates
       - mlflow-db-data:/mlflow/db
     ports:
       - "5000:5000"
