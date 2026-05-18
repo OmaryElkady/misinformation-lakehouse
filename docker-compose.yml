@@ -38,7 +38,7 @@ services:
                --port 5000
                --backend-store-uri sqlite:////mlflow/db/mlflow.db
                --default-artifact-root /mlflow/mlruns
-               --extra-allowed-hosts mlflow:5000"
+               --allowed-hosts '*'"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 15s
