@@ -29,6 +29,10 @@ COPY src/ ./src/
 RUN useradd -m appuser && chown -R appuser /app
 USER appuser
 
+# Prevent MLflow HTTP calls from hanging for the default 120 s when the
+# tracking server is unreachable (e.g. CI). 5 s is plenty for a co-located server.
+ENV MLFLOW_HTTP_REQUEST_TIMEOUT=5
+
 EXPOSE 8000
 
 CMD ["uvicorn", "src.serving.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

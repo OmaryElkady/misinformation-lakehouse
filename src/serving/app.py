@@ -37,15 +37,7 @@ groq_client = (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import asyncio
-
-    for attempt in range(1, 4):
-        model_loader.load()
-        if model_loader.loaded:
-            break
-        if attempt < 3:
-            logger.warning(f"Model load attempt {attempt}/3 failed — retrying in 3s")
-            await asyncio.sleep(3)
+    model_loader.load()
     yield
 
 
