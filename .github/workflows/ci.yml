@@ -110,12 +110,12 @@ jobs:
             -e MLFLOW_TRACKING_URI=http://localhost:5000 \
             misinfo-api:ci-${{ github.sha }}
 
-          # Wait for startup
-          sleep 10
-
-          # Hit /health — must return 200
-          curl --fail http://localhost:8000/health || \
-            (docker logs misinfo-api-test && exit 1)
+          # Poll until /health returns 200 (up to 60 s)
+          for i in $(seq 1 12); do
+            curl -sf http://localhost:8000/health && break
+            [ $i -lt 12 ] || { docker logs misinfo-api-test; exit 1; }
+            sleep 5
+          done
 
           docker stop misinfo-api-test
 

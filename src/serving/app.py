@@ -44,8 +44,8 @@ async def lifespan(app: FastAPI):
         if model_loader.loaded:
             break
         if attempt < 3:
-            logger.warning(f"Model load attempt {attempt}/3 failed — retrying in 10s")
-            await asyncio.sleep(10)
+            logger.warning(f"Model load attempt {attempt}/3 failed — retrying in 3s")
+            await asyncio.sleep(3)
     yield
 
 
