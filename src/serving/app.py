@@ -37,7 +37,20 @@ groq_client = (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    model_loader.load()
+    import asyncio
+
+    loop = asyncio.get_running_loop()
+    try:
+        # run_in_executor keeps the event loop unblocked while mlflow makes
+        # synchronous HTTP calls; wait_for guarantees we yield within 15 s
+        # even if the tracking server accepts the TCP connection but never
+        # responds (the failure mode seen on GitHub Actions runners).
+        await asyncio.wait_for(
+            loop.run_in_executor(None, model_loader.load),
+            timeout=15.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("Model load timed out after 15 s — starting without a model")
     yield
 
 
