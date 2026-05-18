@@ -31,14 +31,15 @@ services:
       MLFLOW_HOST: "0.0.0.0"
       MLFLOW_GUNICORN_OPTS: "--timeout 120"
       GUNICORN_CMD_ARGS: "--timeout 120"
+      # Allow requests from the API container (Host: mlflow:5000) and browser
+      MLFLOW_SERVER_ALLOWED_HOSTS: "localhost,localhost:5000,mlflow,mlflow:5000"
     command: >
       bash -c "pip install 'mlflow>=3.0.0,<4.0.0' --quiet &&
                python -m mlflow server
                --host 0.0.0.0
                --port 5000
                --backend-store-uri sqlite:////mlflow/db/mlflow.db
-               --default-artifact-root /mlflow/mlruns
-               --allowed-hosts '*'"
+               --default-artifact-root /mlflow/mlruns"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 15s
