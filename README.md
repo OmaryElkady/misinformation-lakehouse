@@ -163,7 +163,7 @@ Delta Lake was chosen over plain Parquet for three concrete reasons. First, merg
 | uvicorn | 0.30.1 | ASGI server |
 | pydantic | 2.7.1 | Request/response validation |
 | pydantic-settings | 2.3.0 | Environment-based configuration |
-| Groq | 0.9.0 | Llama 3 (llama3-8b-8192) explanation generation |
+| Groq | >=0.13.0 | Llama 3 explanation generation — model: `llama-3.1-8b-instant` |
 
 ### Orchestration
 
@@ -479,7 +479,7 @@ The inference API loads `Production` first, falls back to `Staging`, and starts 
 
 ### Groq Llama 3 Explanation Layer
 
-When `explain=true` is passed to `/predict`, the API calls Groq's `llama3-8b-8192` model with a structured prompt that includes the classification label, confidence score, and the original claim text. The model returns a 2–3 sentence explanation citing verifiable facts. The feature degrades gracefully — if `GROQ_API_KEY` is absent or the Groq client is unavailable, `explanation` is returned as `null` and the prediction proceeds normally.
+When `explain=true` is passed to `/predict`, the API calls Groq's `llama-3.1-8b-instant` model with a structured prompt that includes the classification label, confidence score, and the original claim text. The model returns a 2–3 sentence explanation citing verifiable facts. The feature degrades gracefully — if `GROQ_API_KEY` is absent or the Groq client is unavailable, `explanation` is returned as `null` and the prediction proceeds normally.
 
 Example explanation for a classified claim:
 > *"This claim was classified as misinformation with 87% confidence. The assertion contradicts peer-reviewed studies published in multiple journals showing no causal link between the two. Additionally, the primary source cited does not exist in any academic database."*
