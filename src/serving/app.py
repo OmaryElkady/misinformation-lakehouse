@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
             loop.run_in_executor(None, model_loader.load),
             timeout=15.0,
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning("Model load timed out after 15 s — starting without a model")
     yield
 
