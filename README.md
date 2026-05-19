@@ -26,7 +26,7 @@ A `roberta-base` model (125M parameters) is fine-tuned for sequence classificati
 
 ## Architecture
 
-<!-- TODO: Add architecture diagram → docs/architecture.png -->
+![Architecture](docs/Architecture.png)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
