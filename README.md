@@ -141,19 +141,19 @@ Delta Lake was chosen over plain Parquet for three concrete reasons. First, merg
 | pandas | 2.2.2 | Parquet export, small data operations |
 | pyarrow | 15.0.2 | Parquet/Delta serialization |
 | boto3 | 1.34.120 | S3 connectivity verification |
-| TextBlob | — | Sentiment polarity UDF in Silver→Gold |
+| TextBlob | 0.18.0 | Sentiment polarity UDF in Silver→Gold |
 
 ### ML Layer
 
 | Technology | Version | Purpose |
 |---|---|---|
 | transformers | ≥4.44.0 | RoBERTa fine-tuning, tokenizer |
-| torch | Colab pre-installed | Training backend (CUDA-compatible, not pinned) |
+| torch | 2.3.0 (local) · Colab pre-installed | Training backend; not pinned in Colab (CUDA build) |
 | accelerate | ≥0.34.0 | HuggingFace Trainer multi-GPU / mixed precision |
 | datasets | ≥2.21.0 | HuggingFace dataset loading |
 | scikit-learn | ≥1.6.0 | F1, precision, recall, confusion matrix |
-| MLflow | ≥2.15.0 | Experiment tracking + model registry |
-| matplotlib | 3.9.0 | Confusion matrix artifact |
+| matplotlib | ≥3.9.0 | Confusion matrix artifact logged to MLflow |
+| MLflow | ≥3.0.0, <4.0.0 | Experiment tracking + model registry |
 
 ### Serving Layer
 
@@ -248,7 +248,6 @@ python -m src.processing.silver_to_gold
 # Step 4a (local): Export Gold → Parquet for Colab training
 python -m src.training.train
 # → writes data/exports/train.parquet and data/exports/val.parquet
-# → See scripts/setup_colab.md for the Colab fine-tuning walkthrough
 
 # Step 4b: Register a completed model (after Colab training)
 python -c "from src.training.train import register_model; register_model('<RUN_ID>')"
@@ -260,6 +259,8 @@ curl -X POST http://localhost:8000/predict \
   -H "Content-Type: application/json" \
   -d '{"text": "Scientists confirm the moon is made of cheese."}'
 ```
+
+> **GPU Training:** Step 4a exports the data; the actual fine-tuning runs on Google Colab (free T4 GPU) with a local MLflow tunnel via ngrok. See [`scripts/setup_colab.md`](scripts/setup_colab.md) for the full step-by-step walkthrough.
 
 ### S3 / Production Mode
 
