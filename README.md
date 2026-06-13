@@ -351,10 +351,6 @@ misinformation-lakehouse/
 ├── docker-compose.yml               # MLflow + FastAPI + Prefect server + worker
 ├── requirements.txt                 # Pinned production dependencies
 ├── pyproject.toml                   # ruff + black + pytest configuration
-├── CLAUDE.md                        # AI assistant codebase instructions
-├── architecture.md                  # Data flow and module responsibilities
-├── tech-stack.md                    # Pinned versions and approved libraries
-├── gotchas.md                       # Known pitfalls (PySpark mocks, S3 JARs, etc.)
 └── scripts/setup_colab.md           # Step-by-step Colab training walkthrough
 ```
 
